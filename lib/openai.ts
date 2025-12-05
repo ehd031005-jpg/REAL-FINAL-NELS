@@ -727,7 +727,7 @@ export async function generateQuizFromArticle(
     return words.slice(0, 5).map((word, idx) => ({
       id: `fallback-${idx + 1}`,
       question: `What does "${word}" mean in this article?`,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      options: ['A key term from the article', 'A different concept', 'An unrelated term', 'A term with opposite meaning'],
       correctAnswer: 0,
       explanation: `"${word}" is a key term in this article.`,
       word: word,
@@ -785,28 +785,45 @@ For each question:
 1. Create a fill-in-the-blank question using a sentence from or based on the article
 2. Generate 4 multiple choice options where:
    - ONE option is the correct answer (from the article)
-   - THREE options are plausible distractors related to the topic but clearly wrong
+   - THREE options are plausible distractors - these must be REAL words, phrases, or concepts related to the topic but clearly wrong
+   - CRITICAL: Each option MUST be a meaningful word, phrase, or concept - NEVER use "Option A", "Option B", "option A", "option B", "Choice A", "Choice B", or any placeholder text
+   - All options should be plausible but only one is correct
+   - Options should be related to the article's topic and vocabulary level
 3. Randomly place the correct answer in different positions (0, 1, 2, or 3) - vary the position for each question
 4. Provide an explanation that references the article content
 5. Identify the key word or phrase being tested
+
+CRITICAL REQUIREMENTS FOR OPTIONS:
+- Each option MUST be a REAL, meaningful word, phrase, or concept
+- FORBIDDEN: "Option A", "Option B", "option A", "option B", "Choice A", "Choice B", or any placeholder text
+- All 4 options must be plausible answers that could make sense in context
+- Wrong options should be related to the topic but clearly incorrect
+- Example of GOOD options: ["delaying", "stopping", "accelerating", "preventing"]
+- Example of BAD options: ["option A", "option B", "accelerating", "option D"] - THIS IS WRONG!
 
 IMPORTANT: 
 - Use words/phrases that actually appear in the article
 - Make questions specific to this article's content
 - Vary the correctAnswer index (0, 1, 2, 3) across questions - do NOT always use 0
 - Ensure distractors are related to the topic but clearly incorrect
+- Each option must be a REAL word, phrase, or concept (NOT "Option A", "Option B", etc.)
 
 Return as JSON array with this exact structure:
 [
   {
     "question": "Fill-in-the-blank question with _____ based on the article",
-    "options": ["option A", "option B", "option C", "option D"],
+    "options": ["real word 1", "real word 2", "real word 3", "real word 4"],
     "correctAnswer": 2,
     "explanation": "Explanation referencing the article content",
     "word": "key word or phrase from article"
   },
   ...
 ]
+
+CRITICAL: In the "options" array, use REAL words/phrases, NOT "option A", "option B", etc.
+Example:
+- CORRECT: "options": ["delaying", "stopping", "accelerating", "preventing"]
+- WRONG: "options": ["option A", "option B", "accelerating", "option D"]
 
 Example of good question:
 If the article mentions "The summit focused on accelerating the transition to renewable energy", a good question would be:
@@ -820,7 +837,16 @@ If the article mentions "The summit focused on accelerating the transition to re
 
 Note: correctAnswer should be 0, 1, 2, or 3, and should vary across questions.`
 
-    const systemInstruction = 'You are an English language teacher creating vocabulary quizzes from news articles. Always respond with valid JSON array only, no additional text.'
+    const systemInstruction = `You are an English language teacher creating vocabulary quizzes from news articles. 
+
+CRITICAL RULES FOR OPTIONS:
+- Each option MUST be a real, meaningful word, phrase, or concept
+- NEVER use "Option A", "Option B", "option A", "option B", "Choice A", "Choice B", or any placeholder text
+- All 4 options must be plausible answers - use real words/phrases that could make sense in context
+- Wrong options should be related to the topic but clearly incorrect
+- Example: For a question about "accelerating", use options like ["delaying", "stopping", "accelerating", "preventing"] - NOT ["option A", "option B", "accelerating", "option D"]
+
+Always respond with valid JSON array only, no additional text.`
 
     const responseText = await generateText(prompt, systemInstruction)
     console.log('Quiz generation response (first 500 chars):', responseText.substring(0, 500))
@@ -868,6 +894,26 @@ Note: correctAnswer should be 0, 1, 2, or 3, and should vary across questions.`
           if (!Array.isArray(q.options) || q.options.length !== 4) return false
           // 모든 옵션이 문자열인지 확인
           if (!q.options.every((opt: any) => typeof opt === 'string' && opt.trim().length > 0)) return false
+          // "option A", "option B" 같은 placeholder 텍스트가 있는지 확인 (거부)
+          const hasPlaceholder = q.options.some((opt: string) => {
+            const lowerOpt = opt.toLowerCase().trim()
+            return lowerOpt.startsWith('option ') || 
+                   lowerOpt.startsWith('choice ') || 
+                   lowerOpt === 'option a' || 
+                   lowerOpt === 'option b' || 
+                   lowerOpt === 'option c' || 
+                   lowerOpt === 'option d' ||
+                   lowerOpt === 'choice a' ||
+                   lowerOpt === 'choice b' ||
+                   lowerOpt === 'choice c' ||
+                   lowerOpt === 'choice d'
+          })
+          if (hasPlaceholder) {
+            console.warn('❌ Quiz question contains placeholder options:', q.options)
+            return false
+          }
+          // 각 옵션이 최소 2글자 이상인지 확인 (너무 짧은 옵션 거부)
+          if (!q.options.every((opt: string) => opt.trim().length >= 2)) return false
           // correctAnswer가 유효한지 확인
           if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer >= 4) return false
           return true
@@ -972,15 +1018,19 @@ Note: correctAnswer should be 0, 1, 2, or 3, and should vary across questions.`
     // 각 단어마다 다른 정답 위치에 배치
     return words.slice(0, 5).map((word, idx) => {
       const correctIndex = idx % 4
-      const options = ['Option A', 'Option B', 'Option C', 'Option D']
-      const correctOption = `The word "${word}" appears in the article`
-      const shuffledOptions = [...options]
-      shuffledOptions[correctIndex] = correctOption
+      const correctOption = `A key term from the article`
+      const wrongOptions = [
+        `A different concept not in the article`,
+        `An unrelated term`,
+        `A term with opposite meaning`
+      ]
+      const shuffledOptions = [...wrongOptions]
+      shuffledOptions.splice(correctIndex, 0, correctOption)
       
       return {
         id: `fallback-${idx + 1}`,
         question: `What does "${word}" mean in this article?`,
-        options: shuffledOptions,
+        options: shuffledOptions.slice(0, 4),
         correctAnswer: correctIndex,
         explanation: `"${word}" is a key term in this article.`,
         word: word,

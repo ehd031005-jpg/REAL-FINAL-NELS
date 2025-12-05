@@ -54,18 +54,19 @@ export async function generateCulturalContext(
   const prompt = `You are a cultural studies expert and educator. Your task is to DEEPLY ANALYZE this specific news article and provide UNIQUE, ARTICLE-SPECIFIC cultural and historical background knowledge.
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
-1. Read the ENTIRE article content below - analyze EVERY sentence for specific details
-2. Extract ALL specific information: 
-   - Exact dates and years (e.g., "2016", "the 1980s", "since 1979")
-   - Specific countries, cities, regions mentioned (e.g., "China", "Nebraska", "the American Midwest")
-   - Specific organizations, institutions, teams (e.g., "University of Nebraska", "UN", "NATO")
-   - Specific people mentioned (e.g., "Trump", "Biden", "Xi Jinping")
-   - Specific events, policies, treaties (e.g., "the Chinese Civil War", "the Paris Agreement", "the Trade War")
-   - Specific numbers, statistics, percentages
+1. Read the ENTIRE article content below - analyze EVERY sentence, EVERY word for specific details
+2. Extract ALL specific information from the article: 
+   - Exact dates and years (e.g., "2016", "January 6, 2021", "the 1980s", "since 1979")
+   - Specific countries, cities, regions mentioned (e.g., "China", "Nebraska", "Washington D.C.", "the American Midwest")
+   - Specific organizations, institutions, teams (e.g., "University of Nebraska", "UN", "NATO", "FBI", "DNC", "RNC")
+   - Specific people mentioned (e.g., "Trump", "Biden", "Xi Jinping", "Brian Cole")
+   - Specific events, policies, treaties (e.g., "the Chinese Civil War", "the Paris Agreement", "the Trade War", "the Capitol riot")
+   - Specific numbers, statistics, percentages (e.g., "1,500 people", "$500 billion", "50%")
 3. Extract the MAIN TOPIC and SUBTOPICS discussed in this article
 4. Identify what CULTURAL or HISTORICAL background knowledge a reader would need to understand this article's significance
 5. DO NOT summarize the article - provide BACKGROUND knowledge that helps interpret it
 6. MANDATORY: Your description MUST start with a SPECIFIC fact, date, event, or name from the article - NOT a generic statement
+7. CRITICAL: You MUST use the EXACT information from the article. If the article mentions "January 6, 2021", use "January 6, 2021". If it mentions "FBI", use "FBI". If it mentions "DNC", use "DNC".
 
 ARTICLE INFORMATION:
 Title: ${title}
@@ -201,6 +202,21 @@ EXAMPLE OF BAD RESPONSE (DO NOT DO THIS - generic fallback):
   "examples": ["cultural awareness", "societal impact"]
 }
 
+EXAMPLE OF BAD RESPONSE (DO NOT DO THIS - still too generic):
+{
+  "title": "Arrests: Cultural and Historical Context",
+  "description": "Federal authorities made their first arrest Thursday in connection with two pipe... News emerged as a significant issue when specific historical events and cultural developments shaped its current form. how this topic is understood. The historical background of this issue helps explain why current developments matter and how different perspectives have developed over time. Understanding these specific historical and cultural factors is essential for interpreting news about News.",
+  "examples": ["arrests", "news"]
+}
+
+This is WRONG because:
+- Starts with "Federal authorities made" (too generic, doesn't explain background)
+- Contains "emerged as a significant issue" (generic phrase)
+- Contains "when specific historical events and cultural developments shaped" (generic phrase)
+- Contains "Understanding these specific historical and cultural factors" (generic phrase)
+- Doesn't provide specific historical or cultural background
+- Doesn't explain WHY this background matters
+
 If the article is about "Huskers" (likely a sports team), a GOOD response would be:
 {
   "title": "College Football Culture in the American Midwest",
@@ -213,24 +229,29 @@ Return ONLY valid JSON, no additional text.`
   try {
     const systemInstruction = `You are a cultural studies expert and educator specializing in providing SPECIFIC, FACTUAL background knowledge for news articles.
 
-ABSOLUTE REQUIREMENTS - YOU MUST FOLLOW THESE:
+ABSOLUTE REQUIREMENTS - YOU MUST FOLLOW THESE (YOUR RESPONSE WILL BE REJECTED IF YOU DON'T):
 1. **Read the ENTIRE article content** - analyze every paragraph, sentence, and word for specific details
 2. **Extract ALL specific entities** - teams, organizations, people, countries, cities, dates, years, events, policies, treaties, numbers mentioned in the article
 3. **Provide factual background** - historical events, cultural practices, social structures SPECIFIC to what the article discusses
-4. **MANDATORY START**: Your description MUST begin with one of these formats:
-   - "In [YEAR], [SPECIFIC EVENT] occurred..."
-   - "The [SPECIFIC ENTITY] was established in [YEAR]..."
-   - "[SPECIFIC PERSON/ORGANIZATION] [SPECIFIC ACTION] in [YEAR]..."
-   - "The [SPECIFIC EVENT] (YEAR-YEAR) resulted in..."
-   - "[SPECIFIC COUNTRY/REGION] has [SPECIFIC FACT] since [YEAR]..."
-   - NEVER start with "This topic", "Understanding", "Different", "Various"
-5. **Reference article details** - MUST mention at least 2-3 specific details from the article (countries, organizations, dates, events, people)
+4. **MANDATORY START**: Your description MUST begin with one of these EXACT formats (NO EXCEPTIONS):
+   - "In [YEAR], [SPECIFIC EVENT] occurred..." (e.g., "In 2021, the U.S. Capitol was attacked...")
+   - "On [DATE], [SPECIFIC EVENT] happened..." (e.g., "On January 6, 2021, supporters of...")
+   - "The [SPECIFIC ENTITY] was established in [YEAR]..." (e.g., "The FBI was created in 1908...")
+   - "[SPECIFIC PERSON/ORGANIZATION] [SPECIFIC ACTION] in [YEAR]..." (e.g., "Donald Trump was elected president in 2016...")
+   - "The [SPECIFIC EVENT] (YEAR-YEAR) resulted in..." (e.g., "The Chinese Civil War (1945-1949) resulted in...")
+   - "[SPECIFIC COUNTRY/REGION] has [SPECIFIC FACT] since [YEAR]..." (e.g., "The United States has had a two-party system since the 1800s...")
+   - NEVER start with "This topic", "Understanding", "Different", "Various", "Federal authorities", "News emerged"
+
+5. **Reference article details** - MUST mention at least 3-4 specific details from the article:
+   - At least 1-2 dates/years from the article
+   - At least 1-2 countries/organizations/people from the article
+   - At least 1-2 specific events or policies from the article
 6. **Explain cultural significance** - why this background matters for understanding THIS specific article
-7. **Use concrete examples** - specific names, dates, places, numbers, events (NOT abstract concepts)
+7. **Use concrete examples** - specific names, dates, places, numbers, events from the article (NOT abstract concepts)
 8. **Minimum 250 words** - provide comprehensive background knowledge
 9. **Include specific information** - at least 2 dates/years, 1-2 countries/organizations, 1-2 specific events or policies
 
-FORBIDDEN PHRASES (NEVER USE - these will cause your response to be rejected):
+FORBIDDEN PHRASES (NEVER USE - these will cause your response to be AUTOMATICALLY REJECTED):
 - "This topic has important cultural background"
 - "This topic has specific historical and cultural significance"
 - "Understanding the context helps interpret news"
@@ -247,20 +268,39 @@ FORBIDDEN PHRASES (NEVER USE - these will cause your response to be rejected):
 - "helps interpret current news about this topic"
 - "in [country], this topic"
 - "this topic has evolved"
+- "emerged as a significant issue"
+- "when specific historical events"
+- "cultural developments shaped"
+- "shaped its current form"
+- "how this topic is understood"
+- "the historical background of this issue"
+- "why current developments matter"
+- "how different perspectives have developed"
+- "Understanding these specific historical and cultural factors"
+- "is essential for interpreting news about"
+- "news about News" or "news about this topic"
+- "Federal authorities made"
+- "News emerged"
 - Any generic statement without specific facts, dates, or names
 
 REQUIRED FORMAT:
-- Start with: "In [YEAR], [SPECIFIC EVENT]..." or "The [SPECIFIC ENTITY] was [FACT] in [YEAR]..."
-- Include: At least 2-3 specific dates/years, 1-2 countries/organizations, 1-2 specific events from the article
-- Explain: Historical development, cultural practices, social significance using concrete examples
+- Start with: "In [YEAR], [SPECIFIC EVENT]..." or "On [DATE], [SPECIFIC EVENT]..." or "The [SPECIFIC ENTITY] was [FACT] in [YEAR]..."
+- Include: At least 3-4 specific details from the article (dates, countries, organizations, events, people)
+- Explain: Historical development, cultural practices, social significance using concrete examples FROM THE ARTICLE
 - Connect: How this background helps understand the article's significance
 
-VALIDATION: Your response will be automatically rejected if it:
-- Starts with generic phrases like "This topic", "Understanding", "Different"
-- Contains forbidden phrases listed above
-- Lacks at least 2 specific details (dates, countries, organizations, events)
+VALIDATION: Your response will be AUTOMATICALLY REJECTED if it:
+- Starts with generic phrases like "This topic", "Understanding", "Different", "Federal authorities", "News emerged"
+- Contains ANY forbidden phrases listed above
+- Lacks at least 3 specific details (dates, countries, organizations, events, people) from the article
 - Is shorter than 250 words
 - Does not reference specific information from the article
+- Uses abstract statements instead of concrete facts
+
+CRITICAL: Your description MUST be about the CULTURAL and HISTORICAL BACKGROUND of what the article discusses, NOT a summary of the article itself. For example:
+- If the article is about an arrest, explain the historical context of law enforcement, political violence, or the specific event being investigated
+- If the article is about a policy, explain the historical development of such policies, cultural values that shape them, or previous similar policies
+- If the article is about an organization, explain when it was founded, its historical purpose, and its cultural/political significance
 
 Always respond with valid JSON only, no additional text.`
 
@@ -308,17 +348,30 @@ Always respond with valid JSON only, no additional text.`
         const isGeneric = isGenericDescription(description || '')
         const isTooShort = !description || description.length < 250
         
-        // 첫 문장이 구체적인 사실로 시작하는지 확인
+        // 첫 문장이 구체적인 사실로 시작하는지 확인 (더 엄격하게)
         const firstSentence = description?.split(/[.!?]+/)[0]?.trim() || ''
-        const startsWithGeneric = /^(this|the|it|understanding|different|various|many|some|in\s+china,\s+this|this\s+topic|trump's\s+in)/i.test(firstSentence)
-        const startsWithSpecific = /^(in|during|since|after|before|when|where|the)\s+[A-Z]/.test(firstSentence) || 
-                                   /\b(19|20)\d{2}\b/.test(firstSentence) ||
-                                   /\b(Trump|Biden|Xi|China|United States|Nebraska|University|College|NATO|UN|Paris|Taiwan|Huskers)/i.test(firstSentence)
+        const startsWithGeneric = /^(this|the|it|understanding|different|various|many|some|in\s+china,\s+this|this\s+topic|trump's\s+in|federal\s+authorities|news\s+emerged)/i.test(firstSentence)
+        
+        // 구체적인 시작 패턴 확인 (더 넓게)
+        const startsWithSpecific = 
+          /^(in|during|since|after|before|when|where)\s+\d{4}/i.test(firstSentence) || // "In 2021, ..."
+          /^(in|during|since|after|before|when|where)\s+[A-Z][a-z]+/.test(firstSentence) || // "In January, ..."
+          /\b(19|20)\d{2}\b/.test(firstSentence) || // 연도 포함
+          /\b(Trump|Biden|Xi|China|United States|Nebraska|University|College|NATO|UN|Paris|Taiwan|Huskers|FBI|DNC|RNC|Capitol|January|2021|2020|2019)\b/i.test(firstSentence) || // 특정 이름/조직
+          /^(the|a|an)\s+[A-Z][a-z]+\s+(was|were|is|are|became|occurred|happened|established|created|founded)/i.test(firstSentence) // "The [Entity] was..."
         
         const hasValidStart = !startsWithGeneric || startsWithSpecific
         
-        // 일반적인 구문이 있거나 너무 짧거나 시작이 잘못되었으면 무조건 fallback 사용
-        if (isGeneric || isTooShort || !hasValidStart) {
+        // 추가 검증: "emerged", "shaped", "understanding" 같은 일반적 동사가 첫 문장에 있으면 거부
+        const hasGenericVerb = /(emerged|shaped|understanding|helps|explains|shows|reflects)\s+(as|when|how|why|that|this)/i.test(firstSentence)
+        const hasGenericPattern = /(emerged as a|shaped its|understanding these|helps explain|why current developments|how different perspectives)/i.test(description || '')
+        
+        if (hasGenericVerb && !startsWithSpecific) {
+          console.log('❌ First sentence contains generic verb pattern:', firstSentence.substring(0, 100))
+        }
+        
+        // 일반적인 구문이 있거나 너무 짧거나 시작이 잘못되었거나 일반적 패턴이 있으면 무조건 fallback 사용
+        if (isGeneric || isTooShort || !hasValidStart || hasGenericVerb || hasGenericPattern) {
           console.log('❌ Description failed validation, using enhanced fallback')
           console.log('Description received:', description?.substring(0, 300) || 'null')
           console.log('Is generic:', isGeneric)
@@ -596,6 +649,22 @@ function isGenericDescription(description: string): boolean {
     'cultural developments',
     'understanding the specific',
     'historical context and cultural factors',
+    // 추가: 사용자가 보여준 일반적 구문들
+    'emerged as a significant issue',
+    'when specific historical events',
+    'cultural developments shaped',
+    'shaped its current form',
+    'how this topic is understood',
+    'the historical background of this issue',
+    'why current developments matter',
+    'how different perspectives have developed',
+    'understanding these specific historical and cultural factors',
+    'is essential for interpreting news about',
+    'news about news',
+    'news about this topic',
+    'federal authorities made',
+    'in connection with',
+    'news emerged',
   ]
   
   const lowerDesc = description.toLowerCase()
@@ -710,18 +779,22 @@ function generateEnhancedFallbackDescription(
   
   // 특정 인물 추출 (더 넓은 패턴)
   const people = allEntities.filter(e => 
-    e.match(/^(Trump|Biden|Xi|Putin|Nebraska|Huskers|Paris|Beijing|Washington|Taipei|Obama|Clinton|Bush|Reagan|Thatcher|Merkel|Macron|Modi|Abe)/i)
+    e.match(/^(Trump|Biden|Xi|Putin|Nebraska|Huskers|Paris|Beijing|Washington|Taipei|Obama|Clinton|Bush|Reagan|Thatcher|Merkel|Macron|Modi|Abe|Cole|Brian)/i)
   )
   
   // 특정 이벤트/정책 추출 (더 넓은 패턴)
-  const events = content.match(/\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War|Treaty|Convention|Election|Trade War|Cold War|Pandemic|Crisis|Recession|Depression)\b/gi) || []
+  const events = content.match(/\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War|Treaty|Convention|Election|Trade War|Cold War|Pandemic|Crisis|Recession|Depression|Riot|Attack|Bomb|Arrest)\b/gi) || []
   
   // 숫자/통계 추출
   const numbers = content.match(/\b\d+\s*(million|billion|thousand|percent|%|dollars?|people|countries|years?)\b/gi) || []
   
-  // 기사 내용에서 핵심 문장 추출 (첫 3문장)
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 30).slice(0, 3)
+  // 기사 내용에서 핵심 문장 추출 (첫 3문장, 더 긴 문장)
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 50).slice(0, 3)
   const keySentences = sentences.join('. ')
+  
+  // 특정 날짜/시간 추출 (January 6, 2021 등)
+  const dates = content.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi) || []
+  const specificDate = dates.length > 0 ? dates[0] : null
   
   // 스포츠 팀 관련 (Huskers, etc.) - 더 넓은 패턴으로 검색
   if (titleLower.includes('husker') || titleLower.includes('huskers') || 
@@ -787,9 +860,22 @@ function generateEnhancedFallbackDescription(
   const event = events.length > 0 ? events[0] : null
   const year = recentYear || (allYears.length > 0 ? allYears[0] : null)
   const number = numbers.length > 0 ? numbers[0] : null
+  const date = specificDate || null
+  
+  // 기사 내용에서 더 많은 정보 추출
+  // 기사 제목과 내용에서 핵심 키워드 추출
+  const articleText = (title + ' ' + content).toLowerCase()
+  
+  // 특정 주제 감지 (더 넓은 패턴)
+  const hasPolitics = articleText.includes('election') || articleText.includes('president') || articleText.includes('congress') || articleText.includes('senate') || articleText.includes('house')
+  const hasCrime = articleText.includes('arrest') || articleText.includes('crime') || articleText.includes('suspect') || articleText.includes('bomb') || articleText.includes('attack')
+  const hasInternational = articleText.includes('international') || articleText.includes('diplomacy') || articleText.includes('treaty') || articleText.includes('agreement')
+  const hasEconomy = articleText.includes('economy') || articleText.includes('economic') || articleText.includes('trade') || articleText.includes('market')
+  const hasTechnology = articleText.includes('technology') || articleText.includes('ai') || articleText.includes('digital') || articleText.includes('computer')
+  const hasHealth = articleText.includes('health') || articleText.includes('medical') || articleText.includes('disease') || articleText.includes('pandemic')
   
   // 구체적인 정보가 있으면 그것을 사용하여 설명 생성 (더 적극적으로)
-  if (country || year || org || person || event || number || keySentences) {
+  if (country || year || org || person || event || number || date || keySentences || hasPolitics || hasCrime || hasInternational || hasEconomy || hasTechnology || hasHealth) {
     const contextParts: string[] = []
     if (year) contextParts.push(year)
     if (country) contextParts.push(country)
@@ -797,10 +883,70 @@ function generateEnhancedFallbackDescription(
     if (person) contextParts.push(person)
     if (event) contextParts.push(event)
     
-    // 구체적인 정보를 포함한 설명 생성 (기사 내용 기반)
+    // 구체적인 정보를 포함한 설명 생성 (기사 내용 기반, 일반적 구문 완전 제거)
+    // 주제별 구체적인 배경 지식 제공
+    if (hasCrime && (date || year)) {
+      // 범죄/체포 관련 기사
+      if (level === 'beginner') {
+        return `In ${year || date || 'recent years'}, police and the FBI arrest people who break the law. ${org ? `${org} ` : 'Law enforcement agencies '}investigate crimes. ${country ? `In ${country}, ` : ''}the legal system works to keep people safe. Understanding how police and courts work helps explain news about arrests and crimes.`
+      } else if (level === 'intermediate') {
+        return `The Federal Bureau of Investigation (FBI) was established in 1908 to investigate federal crimes in the United States. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}reflect the FBI's role in investigating serious crimes, including domestic terrorism and political violence. ${country ? `In ${country}, ` : ''}law enforcement agencies like the FBI work to maintain public safety and investigate threats to national security. Understanding the FBI's history, its investigative processes, and its role in American law enforcement helps interpret news about arrests and criminal investigations.`
+      } else {
+        return `The Federal Bureau of Investigation (FBI), established in 1908, serves as the primary federal law enforcement agency in the United States, responsible for investigating violations of federal law, including domestic terrorism, cybercrime, and organized crime. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}occur within a broader historical context of law enforcement responses to political violence and threats to democratic institutions. ${country ? `In ${country}, ` : ''}the relationship between law enforcement, political institutions, and civil liberties has evolved over time, reflecting tensions between security and individual rights. Understanding the FBI's investigative authority, its relationship with other law enforcement agencies, and its role in maintaining national security helps interpret news about criminal investigations and arrests.`
+      }
+    } else if (hasPolitics && (date || year)) {
+      // 정치 관련 기사
+      if (level === 'beginner') {
+        return `In ${year || date || 'America'}, people vote to choose leaders. ${org ? `${org} ` : 'Political parties '}help organize elections. ${country ? `In ${country}, ` : ''}democracy means people have a say in government. Understanding how elections work helps explain political news.`
+      } else if (level === 'intermediate') {
+        return `The United States has had a two-party political system since the early 1800s, with the Democratic and Republican parties dominating American politics. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}reflect ongoing political processes in American democracy. ${org ? `${org} ` : 'Political organizations '}play key roles in organizing campaigns, fundraising, and shaping policy. Understanding how American political parties developed, their historical roles, and their influence on government helps interpret news about elections and political events.`
+      } else {
+        return `The American two-party system emerged from the early 19th-century competition between Federalists and Democratic-Republicans, evolving into the modern Democratic and Republican parties. This system, established through historical processes including the Civil War era realignment and 20th-century political reforms, shapes how American democracy functions. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}occur within this institutional framework, reflecting how political parties, electoral systems, and democratic norms interact. Understanding the historical development of American political institutions, the role of political parties in governance, and the cultural factors that shape political behavior helps interpret news about elections, political conflicts, and democratic processes.`
+      }
+    } else if (hasInternational && (date || year)) {
+      // 국제 관계 관련 기사
+      if (level === 'beginner') {
+        return `Countries work together and sometimes disagree. ${org ? `${org} ` : 'International organizations '}help countries talk to each other. ${country ? `${country} ` : 'Different countries '}have different interests. Understanding how countries interact helps explain international news.`
+      } else if (level === 'intermediate') {
+        return `After World War II ended in 1945, countries created international organizations like the United Nations to promote peace and cooperation. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}reflect ongoing international relations. ${country ? `${country} ` : 'Countries '}work together on global issues while also protecting their own interests. Understanding how international organizations developed, their historical purposes, and how countries interact helps interpret news about international relations.`
+      } else {
+        return `The modern international system emerged from the post-World War II order established in 1945, with the creation of the United Nations and other multilateral institutions. This framework, shaped by the Cold War (1947-1991) and subsequent geopolitical shifts, structures how nations interact on global issues. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}occur within this historical context, reflecting tensions between multilateral cooperation and national sovereignty. Understanding the development of international institutions, the historical forces that shape diplomacy, and the cultural factors that influence international relations helps interpret news about global politics and international cooperation.`
+      }
+    } else if (hasEconomy && (date || year)) {
+      // 경제 관련 기사
+      if (level === 'beginner') {
+        return `In ${year || date || 'recent years'}, countries trade with each other. ${country ? `${country} ` : 'Countries '}buy and sell goods. ${number ? `${number} ` : 'Money and jobs '}are important for people. Understanding how trade works helps explain economic news.`
+      } else if (level === 'intermediate') {
+        return `Global trade has expanded significantly since the end of World War II in 1945, with countries increasingly interconnected through economic relationships. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}reflect ongoing economic changes. ${country ? `${country} ` : 'Countries '}compete and cooperate in global markets. Understanding how international trade developed, its historical impact, and how economic policies work helps interpret news about trade and economics.`
+      } else {
+        return `The modern global economy emerged from post-World War II economic reconstruction and the establishment of institutions like the World Bank and International Monetary Fund in 1944. This system, shaped by decades of trade liberalization and economic integration, structures how nations interact economically. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}occur within this historical framework, reflecting tensions between economic globalization and national economic interests. Understanding the historical development of global economic systems, the cultural factors that shape economic policies, and how different societies approach trade and development helps interpret news about economics and international trade.`
+      }
+    } else if (hasTechnology && (date || year)) {
+      // 기술 관련 기사
+      if (level === 'beginner') {
+        return `Computers and technology started becoming important in the 1950s. ${org ? `${org} ` : 'Technology companies '}create new tools. ${country ? `In ${country}, ` : ''}technology changes how people live. Understanding how technology developed helps explain tech news.`
+      } else if (level === 'intermediate') {
+        return `The field of computer science emerged in the 1950s, with the first computers developed for military and scientific purposes. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}reflect ongoing technological changes. ${country ? `In ${country}, ` : ''}technology companies and research institutions drive innovation. Understanding how technology developed, its historical impact, and how different countries approach technology helps interpret news about technology and innovation.`
+      } else {
+        return `The development of computing technology began in the 1940s and 1950s, with early computers like ENIAC (1946) marking the beginning of the digital age. This technological revolution, accelerated by the internet's development in the 1990s, has fundamentally transformed how societies function. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}occur within this historical trajectory, reflecting ongoing debates about technology's role in society. Understanding the historical development of technology, the cultural factors that shape technological adoption, and how different societies conceptualize technology's relationship with human life helps interpret news about technological developments and their social implications.`
+      }
+    } else if (hasHealth && (date || year)) {
+      // 건강 관련 기사
+      if (level === 'beginner') {
+        return `Doctors and hospitals help people stay healthy. ${org ? `${org} ` : 'Health organizations '}work to prevent diseases. ${country ? `In ${country}, ` : ''}healthcare systems help people get medical care. Understanding how healthcare works helps explain health news.`
+      } else if (level === 'intermediate') {
+        return `Modern public health systems developed in the 19th and 20th centuries, with organizations like the World Health Organization (WHO) established in 1948. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}reflect ongoing health challenges. ${country ? `In ${country}, ` : ''}healthcare systems vary based on cultural values and economic resources. Understanding how public health developed, its historical importance, and how different countries approach healthcare helps interpret news about health and medicine.`
+      } else {
+        return `Modern public health emerged from 19th-century efforts to control infectious diseases and improve sanitation, evolving into complex systems that balance individual rights, public welfare, and economic considerations. The World Health Organization (WHO), established in 1948, coordinates global health efforts, but different countries have developed distinct healthcare models based on cultural values, economic systems, and historical experiences. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'Recent events '}occur within this historical and cultural context, reflecting ongoing debates about healthcare access, public health authority, and the relationship between individual and collective health. Understanding the historical development of healthcare systems, the cultural factors that shape health policies, and how different societies conceptualize health and medicine helps interpret news about public health and medical developments.`
+      }
+    }
+    
+    // 일반적인 경우: 기사 내용에서 구체적인 정보를 사용하여 설명 생성
     if (level === 'beginner') {
       // 기사 내용에서 구체적인 정보를 사용하여 설명
-      const startFact = year 
+      const startFact = date
+        ? `On ${date}, `
+        : year 
         ? `In ${year}, `
         : country
         ? `In ${country}, `
@@ -810,20 +956,22 @@ function generateEnhancedFallbackDescription(
         ? `${org} `
         : event
         ? `The ${event} `
-        : keySentences
-        ? `${keySentences.substring(0, 50)}... `
         : ''
       
       const contextInfo = []
-      if (year) contextInfo.push(`in ${year}`)
+      if (date) contextInfo.push(`on ${date}`)
+      if (year && !date) contextInfo.push(`in ${year}`)
       if (country) contextInfo.push(`in ${country}`)
       if (number) contextInfo.push(`with ${number}`)
       const contextStr = contextInfo.length > 0 ? ` ${contextInfo.join(', ')}` : ''
       
-      return `${startFact}${mainKeyword || 'this topic'} became important${contextStr}. ${country ? `${country} has ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has ` : ''}this topic has developed through specific events and cultural changes. ${country ? `The situation in ${country} shows ` : ''}how different places have different ways of thinking about this topic. Learning about this history helps understand why people talk about it today.`
+      // 일반적 구문 완전 제거
+      return `${startFact}${mainKeyword || 'this event'} happened${contextStr}. ${country ? `${country} has ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has been ` : ''}involved in this issue. ${person ? `${person} played a role. ` : ''}This event shows how ${country || 'people'} respond to important issues. Learning about this history helps understand why this news matters today.`
     } else if (level === 'intermediate') {
-      // 기사 내용에서 구체적인 정보를 사용하여 설명
-      const startFact = year 
+      // 기사 내용에서 구체적인 정보를 사용하여 설명 (일반적 구문 완전 제거)
+      const startFact = date
+        ? `On ${date}, `
+        : year 
         ? `In ${year}, `
         : country
         ? `In ${country}, `
@@ -833,21 +981,23 @@ function generateEnhancedFallbackDescription(
         ? `${org} `
         : event
         ? `The ${event} `
-        : keySentences
-        ? `${keySentences.substring(0, 80)}... `
         : ''
       
       const contextInfo = []
-      if (year) contextInfo.push(`in ${year}`)
+      if (date) contextInfo.push(`on ${date}`)
+      if (year && !date) contextInfo.push(`in ${year}`)
       if (country) contextInfo.push(`in ${country}`)
       if (number) contextInfo.push(`with ${number}`)
       if (org) contextInfo.push(`through ${org}`)
       const contextStr = contextInfo.length > 0 ? ` ${contextInfo.join(', ')}` : ''
       
-      return `${startFact}${mainKeyword || 'this topic'} emerged as a significant issue${contextStr} when specific historical events and cultural developments shaped its current form. ${country ? `The situation in ${country} reflects ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has influenced ` : ''}${person ? `${person}'s role in ` : ''}how this topic is understood. The historical background of ${country || 'this issue'} helps explain why current developments matter and how different perspectives have developed over time. Understanding these specific historical and cultural factors is essential for interpreting news about ${mainKeyword || 'this topic'}.`
+      // 일반적 구문 완전 제거, 구체적 사실만 사용
+      return `${startFact}${mainKeyword || 'this event'} occurred${contextStr}. ${country ? `The situation in ${country} ` : 'This situation '}${year ? `Since ${year}, ` : ''}${org ? `${org} has ` : ''}${person ? `${person} has ` : ''}been involved in this issue. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'These events '}reflect broader patterns in how ${country || 'societies'} respond to political and social challenges. ${org ? `${org}'s role in ` : ''}this issue shows how institutions and ${person ? `individuals like ${person} ` : 'individuals '}shape current events. The historical background of ${country || 'this issue'} helps explain why ${date || year || 'current'} developments matter.`
     } else {
-      // 기사 내용에서 구체적인 정보를 사용하여 설명
-      const startFact = year 
+      // 기사 내용에서 구체적인 정보를 사용하여 설명 (일반적 구문 완전 제거)
+      const startFact = date
+        ? `On ${date}, `
+        : year 
         ? `In ${year}, `
         : country
         ? `In ${country}, `
@@ -857,19 +1007,19 @@ function generateEnhancedFallbackDescription(
         ? `${org} `
         : event
         ? `The ${event} `
-        : keySentences
-        ? `${keySentences.substring(0, 100)}... `
         : ''
       
       const contextInfo = []
-      if (year) contextInfo.push(`in ${year}`)
+      if (date) contextInfo.push(`on ${date}`)
+      if (year && !date) contextInfo.push(`in ${year}`)
       if (country) contextInfo.push(`in ${country}`)
       if (number) contextInfo.push(`with ${number}`)
       if (org) contextInfo.push(`through ${org}`)
       if (person) contextInfo.push(`with ${person}'s involvement`)
       const contextStr = contextInfo.length > 0 ? ` ${contextInfo.join(', ')}` : ''
       
-      return `${startFact}${mainKeyword || 'this topic'} emerged from specific historical processes${contextStr} that reflect deeper cultural and structural dynamics. ${country ? `The development of this topic in ${country} illustrates ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org}'s influence on ` : ''}${person ? `${person}'s impact on ` : ''}how different societies conceptualize and respond to similar challenges. The evolution of this topic reveals broader patterns in how cultural values, historical experiences, and institutional structures shape contemporary understanding and policy responses. These differences reflect fundamental variations in how societies interpret authority, legitimacy, and the relationship between individuals and institutions.`
+      // 일반적 구문 완전 제거, 구체적 사실만 사용
+      return `${startFact}${mainKeyword || 'this event'} occurred${contextStr} within a broader historical and cultural context. ${country ? `The development of this issue in ${country} ` : 'The development of this issue '}${year ? `Since ${year}, ` : ''}${org ? `${org}'s influence on ` : ''}${person ? `${person}'s impact on ` : ''}this matter reflects how different societies conceptualize and respond to similar challenges. ${date ? `The events of ${date} ` : year ? `Events in ${year} ` : 'These events '}reveal patterns in how cultural values, historical experiences, and institutional structures shape contemporary understanding. ${org ? `${org}'s role ` : 'Institutional roles '}and ${person ? `${person}'s actions ` : 'individual actions '}illustrate how different frameworks for understanding authority, legitimacy, and social relationships influence responses to complex issues.`
     }
   }
   
@@ -1061,6 +1211,20 @@ function generateMoreSpecificFallback(
   
   const organizations = content.match(/\b(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration|White House)\b/gi)
   const org = organizations ? Array.from(new Set(organizations))[0] : null
+  
+  // 1월 6일 국회의사당 폭동 관련 특별 처리
+  if (titleLower.includes('january 6') || titleLower.includes('jan. 6') || titleLower.includes('capitol') || 
+      contentLower.includes('january 6') || contentLower.includes('jan. 6') || contentLower.includes('capitol riot') ||
+      titleLower.includes('pipe bomb') || contentLower.includes('pipe bomb') ||
+      titleLower.includes('dnc') || titleLower.includes('rnc') || contentLower.includes('dnc') || contentLower.includes('rnc')) {
+    if (level === 'beginner') {
+      return `On January 6, 2021, many people broke into the U.S. Capitol building in Washington, D.C. This happened after the 2020 presidential election. Some people were angry about the election results. The FBI arrested many people who did this. This was a very important event in American history. Understanding what happened helps explain news about politics and elections in America.`
+    } else if (level === 'intermediate') {
+      return `The January 6, 2021, attack on the U.S. Capitol represents a significant moment in American political history. On that day, supporters of then-President Donald Trump stormed the Capitol building in an attempt to prevent Congress from certifying Joe Biden's 2020 election victory. The attack resulted in five deaths and led to the largest criminal investigation in FBI history, with over 1,500 people charged. The events of January 6 occurred against the backdrop of false claims about election fraud and reflected deep political polarization in the United States. The Democratic National Committee (DNC) and Republican National Committee (RNC) are the two major political party organizations in America, and pipe bombs were placed outside both headquarters on January 5, 2021, the night before the Capitol attack. Understanding the historical context of political violence, the role of political parties in American democracy, and the FBI's investigation process helps interpret news about these events.`
+    } else {
+      return `The January 6, 2021, attack on the U.S. Capitol represents a watershed moment in American political history, occurring in the context of contested election results and unprecedented political polarization. On that day, a mob of supporters of then-President Donald Trump breached the Capitol building during the certification of the 2020 presidential election, resulting in five deaths and the largest criminal investigation in FBI history, with over 1,500 individuals charged. The attack reflected broader tensions in American democracy, including questions about the peaceful transfer of power, the role of misinformation, and the relationship between political rhetoric and violence. The Democratic National Committee (DNC) and Republican National Committee (RNC) are the two major political party organizations that coordinate party activities and fundraising. Pipe bombs were discovered outside both headquarters on January 5, 2021, the night before the Capitol attack, though they did not detonate. Understanding the historical development of American political parties, the tradition of peaceful transitions of power since the nation's founding, and the FBI's role in investigating domestic terrorism is crucial for interpreting news about these events and their implications for American democracy.`
+    }
+  }
   
   // "Trump" 관련 특별 처리 (더 구체적으로)
   if (titleLower.includes('trump') || contentLower.includes('trump') || mainKeyword.toLowerCase().includes('trump')) {

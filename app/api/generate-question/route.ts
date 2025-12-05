@@ -281,12 +281,4 @@ Always respond with ONLY the question text.`
     )
   }
 }
-  } catch (error) {
-    console.error('Error in generate-question API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
 

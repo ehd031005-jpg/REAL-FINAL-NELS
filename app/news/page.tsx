@@ -28,23 +28,12 @@ interface NewsArticle {
 export default function NewsPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([])
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
-  const [fullContent, setFullContent] = useState<string | null>(null)
-  const [loadingFullContent, setLoadingFullContent] = useState(false)
   const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchArticles()
   }, [level])
-
-  // 선택된 기사의 원문 전체 내용 가져오기
-  useEffect(() => {
-    if (selectedArticle?.url && selectedArticle.url.startsWith('http')) {
-      fetchFullContent(selectedArticle.url)
-    } else {
-      setFullContent(null)
-    }
-  }, [selectedArticle?.url])
 
   const fetchArticles = async () => {
     setLoading(true)
@@ -137,33 +126,6 @@ The agreement emphasizes the importance of solar and wind energy, with many coun
     }
   }
 
-  const fetchFullContent = async (url: string) => {
-    setLoadingFullContent(true)
-    try {
-      console.log(`전체 기사 내용 가져오기 시도: ${url}`)
-      const response = await fetch(`/api/fetch-article?url=${encodeURIComponent(url)}`)
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data && data.success && data.content && typeof data.content === 'string') {
-        console.log(`전체 기사 내용 가져오기 성공: ${data.content.length} characters`)
-        setFullContent(data.content)
-      } else {
-        console.warn('전체 기사 내용을 가져오지 못했습니다:', data?.message || 'Unknown error')
-        // 전체 내용을 가져오지 못한 경우 원본 content 사용
-        setFullContent(null)
-      }
-    } catch (error) {
-      console.error('Failed to fetch full content:', error)
-      setFullContent(null)
-    } finally {
-      setLoadingFullContent(false)
-    }
-  }
 
   const handlePlayAudio = (text: string) => {
     // 음성 재생 기능 (브라우저 Web Speech API 사용)
@@ -310,64 +272,30 @@ The agreement emphasizes the importance of solar and wind energy, with many coun
                   </div>
                 )}
 
-                {/* Article Content */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold">기사 본문</h3>
-                    {loadingFullContent && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
-                        <span>원문 전체 불러오는 중...</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="prose max-w-none">
-                    {(fullContent || selectedArticle.content)?.split('\n')
-                      .map(paragraph => {
-                        // "+chars" 같은 제한 표시 제거
-                        let cleaned = paragraph.replace(/\s*\[\+\d+\s*chars?\]/gi, '')
-                          .replace(/\s*\+\d+\s*chars?/gi, '')
-                          .trim()
-                        return cleaned
-                      })
-                      .filter(paragraph => paragraph.length > 0) // 빈 문자열 제거
-                      .map((paragraph, idx) => {
-                        // 짧은 문단은 인라인으로 처리 (예: 제목, 부제목)
-                        if (paragraph.length < 50 && !paragraph.endsWith('.')) {
-                          return (
-                            <p key={idx} className="mb-2 text-gray-600 font-medium">
-                              {paragraph}
-                            </p>
-                          )
-                        }
-                        return (
-                          <p key={idx} className="mb-4 text-gray-700 leading-relaxed">
-                            {paragraph}
-                          </p>
-                        )
-                      })}
-                    {!fullContent && !loadingFullContent && selectedArticle.url && (
-                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          ⚠️ 전체 기사 내용을 불러오지 못했습니다. 원문 링크를 클릭하여 전체 기사를 확인하세요.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  {selectedArticle.url && (
-                    <div className="mt-4 p-3 bg-primary-50 border border-primary-200 rounded-lg">
-                      <a
-                        href={selectedArticle.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:text-primary-700 font-medium text-sm inline-flex items-center gap-1"
-                      >
-                        <Globe className="w-4 h-4" />
-                        원문 사이트에서 보기 →
-                      </a>
+                {/* Article Summary */}
+                {selectedArticle.summary && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">기사 요약</h3>
+                    <div className="prose max-w-none">
+                      <p className="text-gray-700 leading-relaxed">{selectedArticle.summary}</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Original Article Link */}
+                {selectedArticle.url && (
+                  <div className="mb-6 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+                    <a
+                      href={selectedArticle.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-700 font-medium inline-flex items-center gap-2"
+                    >
+                      <Globe className="w-5 h-5" />
+                      <span>원문 사이트에서 전체 기사 보기 →</span>
+                    </a>
+                  </div>
+                )}
 
                 {/* Cultural Context Card */}
                 {selectedArticle.culturalContext && (
@@ -375,9 +303,11 @@ The agreement emphasizes the importance of solar and wind energy, with many coun
                 )}
 
                 {/* Rephrase and Compare */}
-                <div className="mt-6">
-                  <RephraseCompare text={(fullContent || selectedArticle.content)?.substring(0, 500) || selectedArticle.content.substring(0, 200)} />
-                </div>
+                {selectedArticle.summary && (
+                  <div className="mt-6">
+                    <RephraseCompare text={selectedArticle.summary.substring(0, 500)} />
+                  </div>
+                )}
 
                 {/* Source Info */}
                 {selectedArticle.source && (

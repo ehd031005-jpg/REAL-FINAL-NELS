@@ -27,22 +27,11 @@ export default function NewsDetailPage() {
   const params = useParams()
   const articleId = params.id as string
   const [article, setArticle] = useState<NewsArticle | null>(null)
-  const [fullContent, setFullContent] = useState<string | null>(null)
-  const [loadingFullContent, setLoadingFullContent] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchArticle()
   }, [articleId])
-
-  // 기사 로드 후 원문 전체 내용 가져오기
-  useEffect(() => {
-    if (article?.url && article.url.startsWith('http')) {
-      fetchFullContent(article.url)
-    } else {
-      setFullContent(null)
-    }
-  }, [article?.url])
 
   const fetchArticle = async () => {
     setLoading(true)
@@ -66,32 +55,6 @@ export default function NewsDetailPage() {
     }
   }
 
-  const fetchFullContent = async (url: string) => {
-    setLoadingFullContent(true)
-    try {
-      console.log(`전체 기사 내용 가져오기 시도: ${url}`)
-      const response = await fetch(`/api/fetch-article?url=${encodeURIComponent(url)}`)
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data && data.success && data.content && typeof data.content === 'string') {
-        console.log(`전체 기사 내용 가져오기 성공: ${data.content.length} characters`)
-        setFullContent(data.content)
-      } else {
-        console.warn('전체 기사 내용을 가져오지 못했습니다:', data?.message || 'Unknown error')
-        setFullContent(null)
-      }
-    } catch (error) {
-      console.error('Failed to fetch full content:', error)
-      setFullContent(null)
-    } finally {
-      setLoadingFullContent(false)
-    }
-  }
 
   const handlePlayAudio = (text: string) => {
     if ('speechSynthesis' in window) {
@@ -177,64 +140,30 @@ export default function NewsDetailPage() {
           </div>
         )}
 
-        {/* Article Content */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold">기사 본문</h3>
-            {loadingFullContent && (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
-                <span>원문 전체 불러오는 중...</span>
-              </div>
-            )}
-          </div>
-          <div className="prose max-w-none">
-            {(fullContent || article?.content || '')?.split('\n')
-              .map((paragraph: string) => {
-                // "+chars" 같은 제한 표시 제거
-                let cleaned = paragraph.replace(/\s*\[\+\d+\s*chars?\]/gi, '')
-                  .replace(/\s*\+\d+\s*chars?/gi, '')
-                  .trim()
-                return cleaned
-              })
-              .filter((paragraph: string) => paragraph.length > 0) // 빈 문자열 제거
-              .map((paragraph: string, idx: number) => {
-                // 짧은 문단은 인라인으로 처리 (예: 제목, 부제목)
-                if (paragraph.length < 50 && !paragraph.endsWith('.')) {
-                  return (
-                    <p key={idx} className="mb-2 text-gray-600 font-medium">
-                      {paragraph}
-                    </p>
-                  )
-                }
-                return (
-                  <p key={idx} className="mb-4 text-gray-700 leading-relaxed">
-                    {paragraph}
-                  </p>
-                )
-              })}
-            {!fullContent && !loadingFullContent && article.url && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ 전체 기사 내용을 불러오지 못했습니다. 원문 링크를 클릭하여 전체 기사를 확인하세요.
-                </p>
-              </div>
-            )}
-          </div>
-          {article.url && (
-            <div className="mt-4 p-3 bg-primary-50 border border-primary-200 rounded-lg">
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-600 hover:text-primary-700 font-medium text-sm inline-flex items-center gap-1"
-              >
-                <Globe className="w-4 h-4" />
-                원문 사이트에서 보기 →
-              </a>
+        {/* Article Summary */}
+        {article?.summary && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">기사 요약</h3>
+            <div className="prose max-w-none">
+              <p className="text-gray-700 leading-relaxed">{article.summary}</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Original Article Link */}
+        {article.url && (
+          <div className="mb-6 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 hover:text-primary-700 font-medium inline-flex items-center gap-2"
+            >
+              <Globe className="w-5 h-5" />
+              <span>원문 사이트에서 전체 기사 보기 →</span>
+            </a>
+          </div>
+        )}
 
         {/* Cultural Context Card */}
         {article?.culturalContext && (
@@ -242,9 +171,11 @@ export default function NewsDetailPage() {
         )}
 
         {/* Rephrase and Compare */}
-        <div className="mt-6">
-          <RephraseCompare text={(fullContent || article?.content || '').substring(0, 500) || (article?.content || '').substring(0, 200) || ''} />
-        </div>
+        {article?.summary && (
+          <div className="mt-6">
+            <RephraseCompare text={article.summary.substring(0, 500)} />
+          </div>
+        )}
 
         {/* Actions */}
         <div className="mt-8 flex gap-4">

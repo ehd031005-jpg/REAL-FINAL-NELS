@@ -693,27 +693,35 @@ function generateEnhancedFallbackDescription(
     !['The', 'This', 'That', 'With', 'From', 'About', 'News'].includes(k)
   ) || titleKeywords[0] || ''
   
-  // 기사에서 구체적인 정보 추출 (더 많이)
-  const countries = extractKeyEntities(title, content).filter(e => 
-    e.match(/^(China|United States|USA|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Brazil|Canada|Australia|Nebraska|America|American|Europe|European|Asia|Asian)/i)
+  // 기사에서 구체적인 정보 추출 (더 많이, 더 정확하게)
+  const allEntities = extractKeyEntities(title, content)
+  const countries = allEntities.filter(e => 
+    e.match(/^(China|United States|USA|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Brazil|Canada|Australia|Nebraska|America|American|Europe|European|Asia|Asian|Beijing|Washington|Paris|London|Tokyo|Seoul)/i)
   )
   
   const years = content.match(/\b(19|20)\d{2}\b/g)
   const recentYear = years ? Array.from(new Set(years)).sort().reverse()[0] : null
   const allYears = years ? Array.from(new Set(years)).slice(0, 3) : []
   
-  // 조직/기관 추출
-  const organizations = extractKeyEntities(title, content).filter(e => 
-    e.match(/^(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration|Department|Ministry)/i)
+  // 조직/기관 추출 (더 넓은 패턴)
+  const organizations = allEntities.filter(e => 
+    e.match(/^(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration|Department|Ministry|Organization|Institution|Company|Corporation)/i)
   )
   
-  // 특정 인물 추출
-  const people = extractKeyEntities(title, content).filter(e => 
-    e.match(/^(Trump|Biden|Xi|Putin|Nebraska|Huskers|Paris|Beijing|Washington|Taipei|Obama|Clinton)/i)
+  // 특정 인물 추출 (더 넓은 패턴)
+  const people = allEntities.filter(e => 
+    e.match(/^(Trump|Biden|Xi|Putin|Nebraska|Huskers|Paris|Beijing|Washington|Taipei|Obama|Clinton|Bush|Reagan|Thatcher|Merkel|Macron|Modi|Abe)/i)
   )
   
-  // 특정 이벤트/정책 추출
-  const events = content.match(/\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War|Treaty|Convention|Election|Trade War|Cold War)\b/gi) || []
+  // 특정 이벤트/정책 추출 (더 넓은 패턴)
+  const events = content.match(/\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War|Treaty|Convention|Election|Trade War|Cold War|Pandemic|Crisis|Recession|Depression)\b/gi) || []
+  
+  // 숫자/통계 추출
+  const numbers = content.match(/\b\d+\s*(million|billion|thousand|percent|%|dollars?|people|countries|years?)\b/gi) || []
+  
+  // 기사 내용에서 핵심 문장 추출 (첫 3문장)
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 30).slice(0, 3)
+  const keySentences = sentences.join('. ')
   
   // 스포츠 팀 관련 (Huskers, etc.) - 더 넓은 패턴으로 검색
   if (titleLower.includes('husker') || titleLower.includes('huskers') || 
@@ -778,9 +786,10 @@ function generateEnhancedFallbackDescription(
   const person = people.length > 0 ? people[0] : null
   const event = events.length > 0 ? events[0] : null
   const year = recentYear || (allYears.length > 0 ? allYears[0] : null)
+  const number = numbers.length > 0 ? numbers[0] : null
   
-  // 구체적인 정보가 있으면 그것을 사용하여 설명 생성
-  if (country || year || org || person || event) {
+  // 구체적인 정보가 있으면 그것을 사용하여 설명 생성 (더 적극적으로)
+  if (country || year || org || person || event || number || keySentences) {
     const contextParts: string[] = []
     if (year) contextParts.push(year)
     if (country) contextParts.push(country)
@@ -788,8 +797,9 @@ function generateEnhancedFallbackDescription(
     if (person) contextParts.push(person)
     if (event) contextParts.push(event)
     
-    // 구체적인 정보를 포함한 설명 생성
+    // 구체적인 정보를 포함한 설명 생성 (기사 내용 기반)
     if (level === 'beginner') {
+      // 기사 내용에서 구체적인 정보를 사용하여 설명
       const startFact = year 
         ? `In ${year}, `
         : country
@@ -800,10 +810,19 @@ function generateEnhancedFallbackDescription(
         ? `${org} `
         : event
         ? `The ${event} `
+        : keySentences
+        ? `${keySentences.substring(0, 50)}... `
         : ''
       
-      return `${startFact}${mainKeyword || 'this topic'} became important. ${country ? `${country} has ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has ` : ''}this topic has developed through specific events and cultural changes. ${country ? `The situation in ${country} shows ` : ''}how different places have different ways of thinking about this topic. Learning about this history helps understand why people talk about it today.`
+      const contextInfo = []
+      if (year) contextInfo.push(`in ${year}`)
+      if (country) contextInfo.push(`in ${country}`)
+      if (number) contextInfo.push(`with ${number}`)
+      const contextStr = contextInfo.length > 0 ? ` ${contextInfo.join(', ')}` : ''
+      
+      return `${startFact}${mainKeyword || 'this topic'} became important${contextStr}. ${country ? `${country} has ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has ` : ''}this topic has developed through specific events and cultural changes. ${country ? `The situation in ${country} shows ` : ''}how different places have different ways of thinking about this topic. Learning about this history helps understand why people talk about it today.`
     } else if (level === 'intermediate') {
+      // 기사 내용에서 구체적인 정보를 사용하여 설명
       const startFact = year 
         ? `In ${year}, `
         : country
@@ -814,10 +833,20 @@ function generateEnhancedFallbackDescription(
         ? `${org} `
         : event
         ? `The ${event} `
+        : keySentences
+        ? `${keySentences.substring(0, 80)}... `
         : ''
       
-      return `${startFact}${mainKeyword || 'this topic'} emerged as a significant issue when specific historical events and cultural developments shaped its current form. ${country ? `The situation in ${country} reflects ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has influenced ` : ''}${person ? `${person}'s role in ` : ''}how this topic is understood. The historical background of ${country || 'this issue'} helps explain why current developments matter and how different perspectives have developed over time. Understanding these specific historical and cultural factors is essential for interpreting news about ${mainKeyword || 'this topic'}.`
+      const contextInfo = []
+      if (year) contextInfo.push(`in ${year}`)
+      if (country) contextInfo.push(`in ${country}`)
+      if (number) contextInfo.push(`with ${number}`)
+      if (org) contextInfo.push(`through ${org}`)
+      const contextStr = contextInfo.length > 0 ? ` ${contextInfo.join(', ')}` : ''
+      
+      return `${startFact}${mainKeyword || 'this topic'} emerged as a significant issue${contextStr} when specific historical events and cultural developments shaped its current form. ${country ? `The situation in ${country} reflects ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has influenced ` : ''}${person ? `${person}'s role in ` : ''}how this topic is understood. The historical background of ${country || 'this issue'} helps explain why current developments matter and how different perspectives have developed over time. Understanding these specific historical and cultural factors is essential for interpreting news about ${mainKeyword || 'this topic'}.`
     } else {
+      // 기사 내용에서 구체적인 정보를 사용하여 설명
       const startFact = year 
         ? `In ${year}, `
         : country
@@ -828,9 +857,19 @@ function generateEnhancedFallbackDescription(
         ? `${org} `
         : event
         ? `The ${event} `
+        : keySentences
+        ? `${keySentences.substring(0, 100)}... `
         : ''
       
-      return `${startFact}${mainKeyword || 'this topic'} emerged from specific historical processes that reflect deeper cultural and structural dynamics. ${country ? `The development of this topic in ${country} illustrates ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org}'s influence on ` : ''}${person ? `${person}'s impact on ` : ''}how different societies conceptualize and respond to similar challenges. The evolution of this topic reveals broader patterns in how cultural values, historical experiences, and institutional structures shape contemporary understanding and policy responses. These differences reflect fundamental variations in how societies interpret authority, legitimacy, and the relationship between individuals and institutions.`
+      const contextInfo = []
+      if (year) contextInfo.push(`in ${year}`)
+      if (country) contextInfo.push(`in ${country}`)
+      if (number) contextInfo.push(`with ${number}`)
+      if (org) contextInfo.push(`through ${org}`)
+      if (person) contextInfo.push(`with ${person}'s involvement`)
+      const contextStr = contextInfo.length > 0 ? ` ${contextInfo.join(', ')}` : ''
+      
+      return `${startFact}${mainKeyword || 'this topic'} emerged from specific historical processes${contextStr} that reflect deeper cultural and structural dynamics. ${country ? `The development of this topic in ${country} illustrates ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org}'s influence on ` : ''}${person ? `${person}'s impact on ` : ''}how different societies conceptualize and respond to similar challenges. The evolution of this topic reveals broader patterns in how cultural values, historical experiences, and institutional structures shape contemporary understanding and policy responses. These differences reflect fundamental variations in how societies interpret authority, legitimacy, and the relationship between individuals and institutions.`
     }
   }
   

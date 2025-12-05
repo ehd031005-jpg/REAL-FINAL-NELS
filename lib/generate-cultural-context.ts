@@ -481,31 +481,94 @@ function isGenericDescription(description: string): boolean {
     'this subject',
     'different ways',
     'of thinking',
+    // 추가된 금지 구문들
+    'represents a significant cultural and historical phenomenon',
+    'can be traced through specific historical events',
+    'can be traced through',
+    'specific historical events and cultural shifts',
+    'different regions have developed distinct approaches',
+    'based on their unique historical experiences',
+    'economic conditions, and cultural values',
+    'understanding these specific historical and cultural contexts',
+    'is essential for interpreting current developments',
+    'related to this topic',
+    'represents a significant',
+    'cultural and historical phenomenon',
+    'the development of this topic',
+    'distinct approaches based',
+    'unique historical experiences',
+    'essential for interpreting',
+    'current developments related',
   ]
   
   const lowerDesc = description.toLowerCase()
-  const hasGenericPhrase = genericPhrases.some(phrase => lowerDesc.includes(phrase))
+  const hasGenericPhrase = genericPhrases.some(phrase => lowerDesc.includes(phrase.toLowerCase()))
   
   // 일반적인 구문이 있으면 무조건 일반적인 것으로 판단
   if (hasGenericPhrase) {
-    console.log('Generic phrase detected:', genericPhrases.find(p => lowerDesc.includes(p)))
+    const detectedPhrase = genericPhrases.find(p => lowerDesc.includes(p.toLowerCase()))
+    console.log('❌ Generic phrase detected:', detectedPhrase)
+    console.log('Description snippet:', description.substring(0, 200))
+    return true
+  }
+  
+  // 추가 검증: "represents", "can be traced", "different regions" 같은 패턴이 있으면 거부
+  const suspiciousPatterns = [
+    /represents\s+a\s+significant\s+cultural/i,
+    /can\s+be\s+traced\s+through/i,
+    /different\s+regions\s+have\s+developed/i,
+    /based\s+on\s+their\s+unique\s+historical/i,
+    /understanding\s+these\s+specific\s+historical/i,
+    /essential\s+for\s+interpreting\s+current/i,
+    /the\s+development\s+of\s+this\s+topic/i,
+  ]
+  
+  const hasSuspiciousPattern = suspiciousPatterns.some(pattern => pattern.test(description))
+  if (hasSuspiciousPattern) {
+    console.log('❌ Suspicious pattern detected in description')
     return true
   }
   
   // 구체적인 정보(날짜, 숫자, 특정 이름, 구체적인 사건)가 있는지 확인
   const hasYear = /\b(19|20)\d{2}\b/.test(description)
   const hasPercentage = /\b\d+%/.test(description)
-  const hasCountry = /\b(China|United States|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Nebraska|America|American)\b/i.test(description)
-  const hasOrganization = /\b(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement)\b/i.test(description)
-  const hasSpecificEvent = /\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War)\b/i.test(description)
-  const sentences = description.split('.').filter(s => s.trim().length > 10)
-  const hasMultipleSentences = sentences.length > 3
+  const hasCountry = /\b(China|United States|USA|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Nebraska|America|American|Europe|European|Asia|Asian)\b/i.test(description)
+  const hasOrganization = /\b(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration)\b/i.test(description)
+  const hasSpecificEvent = /\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War|Treaty|Convention|Election)\b/i.test(description)
+  const hasSpecificName = /\b(Trump|Biden|Xi|Putin|Nebraska|Huskers|Paris|Beijing|Washington|Taipei)\b/i.test(description)
+  const hasNumber = /\b\d+\s+(million|billion|thousand|percent|people|countries|years|century)\b/i.test(description)
+  const sentences = description.split(/[.!?]+/).filter(s => s.trim().length > 20)
+  const hasMultipleSentences = sentences.length >= 4
   
-  const hasSpecificInfo = hasYear || hasPercentage || hasCountry || hasOrganization || hasSpecificEvent
+  // 구체적인 정보가 2개 이상 있어야 함 (더 엄격하게)
+  const specificInfoCount = [hasYear, hasPercentage, hasCountry, hasOrganization, hasSpecificEvent, hasSpecificName, hasNumber].filter(Boolean).length
+  const hasEnoughSpecificInfo = specificInfoCount >= 2
   
-  // 구체적인 정보가 없거나 문장이 너무 적으면 일반적인 것으로 판단
-  if (!hasSpecificInfo || !hasMultipleSentences) {
-    console.log('Lacks specific info:', { hasYear, hasCountry, hasOrganization, hasSpecificEvent, hasMultipleSentences, sentenceCount: sentences.length })
+  // 구체적인 정보가 부족하거나 문장이 너무 적으면 일반적인 것으로 판단
+  if (!hasEnoughSpecificInfo || !hasMultipleSentences) {
+    console.log('❌ Lacks specific info:', { 
+      hasYear, 
+      hasCountry, 
+      hasOrganization, 
+      hasSpecificEvent, 
+      hasSpecificName,
+      hasNumber,
+      specificInfoCount,
+      hasMultipleSentences, 
+      sentenceCount: sentences.length 
+    })
+    return true
+  }
+  
+  // 첫 문장이 구체적인 사실로 시작하는지 확인
+  const firstSentence = sentences[0]?.trim() || ''
+  const startsWithGeneric = /^(this|the|it|understanding|different|various|many|some)/i.test(firstSentence)
+  const startsWithSpecific = /^(the|in|during|since|after|before|when|where)\s+[A-Z]/.test(firstSentence) || 
+                             /\b(19|20)\d{2}\b/.test(firstSentence) ||
+                             /\b(Trump|Biden|China|United States|Nebraska|University)/i.test(firstSentence)
+  
+  if (startsWithGeneric && !startsWithSpecific) {
+    console.log('❌ First sentence starts with generic phrase:', firstSentence.substring(0, 50))
     return true
   }
   
@@ -688,7 +751,11 @@ function generateFallbackDescription(
         if (level === 'beginner') {
           return `${mainSubject} is an important topic${contextStr}. This topic has a long history. Many people care about this topic. Different places have different ways of thinking about it. Learning about this history helps understand the news.`
         } else if (level === 'intermediate') {
-          return `${mainSubject} represents a significant cultural and historical phenomenon${contextStr}. The development of this topic can be traced through specific historical events and cultural shifts. Different regions have developed distinct approaches based on their unique historical experiences, economic conditions, and cultural values. Understanding these specific historical and cultural contexts is essential for interpreting current developments related to this topic.`
+          // 구체적인 정보를 포함한 설명 생성
+          if (country || year || org) {
+            return `${mainSubject}${contextStr ? ' ' + contextStr : ''} has specific historical and cultural significance. ${country ? `In ${country}, ` : ''}${year ? `Since ${year}, ` : ''}this topic has evolved through particular historical events and cultural developments. ${org ? `Organizations like ${org} have played important roles. ` : ''}Understanding the specific historical context and cultural factors helps interpret current news about this topic.`
+          }
+          return `${mainSubject} has specific historical and cultural significance. This topic has evolved through particular historical events and cultural developments in different regions. Understanding the specific historical context and cultural factors that shaped this topic helps interpret current news and developments.`
         } else {
           return `${mainSubject} embodies complex cultural and historical dynamics${contextStr} that reflect deeper societal structures and ideological frameworks. The evolution of this topic reveals how different cultural traditions, historical experiences, and social systems shape contemporary understanding and responses. These differences are not merely variations in perspective but reflect fundamental differences in how societies conceptualize core values, authority, and the relationship between individuals and institutions.`
         }
@@ -706,7 +773,7 @@ function generateFallbackDescription(
     return level === 'beginner'
       ? 'This topic has cultural and historical background. Different countries have different views. Understanding this helps explain news.'
       : level === 'intermediate'
-      ? 'This topic represents a significant cultural and historical phenomenon. The development of this topic involves specific historical events and cultural shifts. Different regions have developed distinct approaches based on their unique historical experiences and cultural values.'
+      ? 'This topic has specific historical and cultural significance. The development of this topic involves particular historical events and cultural developments. Understanding the specific historical context and cultural factors helps interpret current news about this topic.'
       : 'This topic embodies complex cultural and historical dynamics that reflect deeper societal structures. The evolution of this topic reveals how different cultural traditions and historical experiences shape contemporary understanding.'
   }
   
@@ -740,5 +807,70 @@ function extractCulturalExamples(content: string, topic: string): string[] {
   }
   
   return Array.from(new Set(examples)).slice(0, 5)
+}
+
+/**
+ * 더 구체적인 fallback 생성 (기사 내용을 더 깊이 분석)
+ */
+function generateMoreSpecificFallback(
+  title: string,
+  content: string,
+  topic: string,
+  level: 'beginner' | 'intermediate' | 'advanced',
+  keyEntities: string[],
+  specificInfo: string
+): string {
+  const titleLower = title.toLowerCase()
+  const contentLower = content.toLowerCase()
+  
+  // 제목에서 주요 키워드 추출
+  const titleWords = title.match(/\b[A-Z][a-z]+\b/g) || []
+  const mainKeyword = titleWords.find(k => 
+    k.length > 4 && 
+    !['The', 'This', 'That', 'With', 'From', 'About', 'News', 'Trump'].includes(k)
+  ) || titleWords[0] || ''
+  
+  // 기사에서 구체적인 정보 추출
+  const years = content.match(/\b(19|20)\d{2}\b/g)
+  const recentYear = years ? Array.from(new Set(years)).sort().reverse()[0] : null
+  
+  const countries = content.match(/\b(China|United States|USA|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Brazil|Canada|Australia|Nebraska|America|American)\b/gi)
+  const country = countries ? Array.from(new Set(countries))[0] : null
+  
+  const organizations = content.match(/\b(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration|White House)\b/gi)
+  const org = organizations ? Array.from(new Set(organizations))[0] : null
+  
+  // "Trump" 관련 특별 처리
+  if (titleLower.includes('trump') || contentLower.includes('trump')) {
+    if (level === 'beginner') {
+      return `Donald Trump was the 45th President of the United States from 2017 to 2021. He is a businessman and politician. Trump's presidency was very controversial. Many people had different opinions about his policies. Understanding American politics helps explain news about Trump.`
+    } else if (level === 'intermediate') {
+      return `Donald Trump, the 45th President of the United States (2017-2021), marked a significant shift in American politics. A businessman and reality TV personality before entering politics, Trump's election in 2016 reflected populist movements and political polarization in the U.S. His presidency was marked by controversial policies on immigration, trade, and international relations. The American two-party system, established in the 1800s, creates a political environment where candidates must appeal to party bases. Understanding how American political culture, media influence, and electoral systems work helps interpret news about Trump and contemporary U.S. politics.`
+    } else {
+      return `Donald Trump's political career reflects broader shifts in American political culture and the relationship between media, populism, and institutional legitimacy. As the 45th U.S. President (2017-2021), Trump's background as a businessman and media personality, combined with his populist rhetoric, challenged traditional political norms. His presidency occurred during a period of intense political polarization in the United States, with debates over immigration, trade policy, and America's role in international institutions. Understanding the historical development of American political parties, the role of media in shaping political discourse, and the cultural factors that enable populist movements is crucial for interpreting news about Trump and contemporary American politics.`
+    }
+  }
+  
+  // 기사 제목과 내용을 기반으로 최대한 구체적인 설명 생성
+  // years, recentYear, country, org는 이미 위에서 정의됨
+  const contextParts: string[] = []
+  if (recentYear) contextParts.push(`in ${recentYear}`)
+  if (country) contextParts.push(`in ${country}`)
+  if (org) contextParts.push(`through ${org}`)
+  
+  const contextStr = contextParts.length > 0 ? ` ${contextParts.join(', ')}` : ''
+  
+  if (mainKeyword && mainKeyword.length > 3) {
+    if (level === 'beginner') {
+      return `${mainKeyword}${contextStr ? ' ' + contextStr : ''} is an important topic in the news. This topic has a long history. Many people care about this topic. Learning about this history helps understand why it appears in the news.`
+    } else if (level === 'intermediate') {
+      return `${mainKeyword}${contextStr ? ' ' + contextStr : ''} represents a topic with specific historical and cultural significance. The development of this topic involves particular historical events, cultural practices, and social structures. Understanding the specific historical context and cultural factors that shaped this topic helps interpret current news and developments.`
+    } else {
+      return `${mainKeyword}${contextStr ? ' ' + contextStr : ''} embodies complex cultural and historical dynamics that reflect deeper societal structures. The evolution of this topic reveals how specific historical events, cultural traditions, and social systems have shaped contemporary understanding and responses. These developments are not merely variations in perspective but reflect fundamental differences in how societies conceptualize values, authority, and social relationships.`
+    }
+  }
+  
+  // 최종 fallback
+  return generateFallbackDescription(topic, level, title, content)
 }
 

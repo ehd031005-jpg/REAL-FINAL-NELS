@@ -887,13 +887,24 @@ Always respond with valid JSON array only, no additional text.`
     
     // 결과 검증 및 ID 추가
     if (Array.isArray(result) && result.length > 0) {
+      console.log(`Raw AI result: ${result.length} questions received`)
+      
       const validatedQuestions = result
         .filter((q: any) => {
           // 필수 필드 확인
-          if (!q.question || typeof q.question !== 'string') return false
-          if (!Array.isArray(q.options) || q.options.length !== 4) return false
+          if (!q.question || typeof q.question !== 'string') {
+            console.warn('❌ Missing or invalid question field')
+            return false
+          }
+          if (!Array.isArray(q.options) || q.options.length !== 4) {
+            console.warn('❌ Invalid options array:', q.options)
+            return false
+          }
           // 모든 옵션이 문자열인지 확인
-          if (!q.options.every((opt: any) => typeof opt === 'string' && opt.trim().length > 0)) return false
+          if (!q.options.every((opt: any) => typeof opt === 'string' && opt.trim().length > 0)) {
+            console.warn('❌ Options must be non-empty strings:', q.options)
+            return false
+          }
           // "option A", "option B" 같은 placeholder 텍스트가 있는지 확인 (거부)
           const hasPlaceholder = q.options.some((opt: string) => {
             const lowerOpt = opt.toLowerCase().trim()
@@ -913,11 +924,22 @@ Always respond with valid JSON array only, no additional text.`
             return false
           }
           // 각 옵션이 최소 2글자 이상인지 확인 (너무 짧은 옵션 거부)
-          if (!q.options.every((opt: string) => opt.trim().length >= 2)) return false
+          if (!q.options.every((opt: string) => opt.trim().length >= 2)) {
+            console.warn('❌ Options too short:', q.options)
+            return false
+          }
           // correctAnswer가 유효한지 확인
-          if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer >= 4) return false
+          if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer >= 4) {
+            console.warn('❌ Invalid correctAnswer:', q.correctAnswer)
+            return false
+          }
+          console.log('✅ Valid question:', q.question.substring(0, 50))
           return true
         })
+      
+      console.log(`Validated questions: ${validatedQuestions.length} out of ${result.length}`)
+      
+      const processedQuestions = validatedQuestions
         .slice(0, 10) // 최대 10개로 제한
         .map((q: any, idx: number) => {
           // 옵션 정리
@@ -944,17 +966,17 @@ Always respond with valid JSON array only, no additional text.`
       
       // 정답 위치 분포 확인 및 로깅
       const positionCounts = [0, 0, 0, 0]
-      validatedQuestions.forEach(q => {
+      processedQuestions.forEach(q => {
         positionCounts[q.correctAnswer]++
       })
       console.log('Correct answer positions before shuffling:', positionCounts)
       
       // 정답 위치가 모두 같은지 확인 (모두 0이면 문제)
-      const allSamePosition = validatedQuestions.every(q => q.correctAnswer === validatedQuestions[0].correctAnswer)
-      if (allSamePosition && validatedQuestions.length > 1) {
-        console.warn(`All correct answers are in position ${validatedQuestions[0].correctAnswer}, shuffling options...`)
+      const allSamePosition = processedQuestions.every(q => q.correctAnswer === processedQuestions[0].correctAnswer)
+      if (allSamePosition && processedQuestions.length > 1) {
+        console.warn(`All correct answers are in position ${processedQuestions[0].correctAnswer}, shuffling options...`)
         // 옵션을 섞어서 정답 위치를 다양하게 만들기
-        const shuffled = validatedQuestions.map((q, idx) => {
+        const shuffled = processedQuestions.map((q, idx) => {
           const correctOption = q.options[q.correctAnswer]
           const wrongOptions = q.options.filter((_: string, i: number) => i !== q.correctAnswer)
           
@@ -982,8 +1004,8 @@ Always respond with valid JSON array only, no additional text.`
         return shuffled
       }
       
-      if (validatedQuestions.length > 0) {
-        return validatedQuestions
+      if (processedQuestions.length > 0) {
+        return processedQuestions
       }
     }
     
@@ -998,8 +1020,32 @@ Always respond with valid JSON array only, no additional text.`
       keywordsCount: keywords.length,
     })
     
-    // Fallback: 기사 내용 기반 간단한 퀴즈 생성
+    // Fallback: 기사 내용 기반 간단한 퀴즈 생성 (실제 단어 의미 제공)
     const words = keywords.length > 0 ? keywords : extractKeywords(content)
+    
+    // 단어별 일반적인 의미 사전 (더 많은 단어 추가 가능)
+    const wordMeanings: Record<string, string[]> = {
+      'impact': ['effect or influence', 'collision or crash', 'significance', 'consequence'],
+      'significant': ['important', 'meaningful', 'notable', 'trivial'],
+      'develop': ['create or build', 'grow or expand', 'decline', 'destroy'],
+      'analyze': ['examine closely', 'study in detail', 'ignore', 'simplify'],
+      'strategy': ['plan or approach', 'method', 'random action', 'chaos'],
+      'implement': ['put into action', 'carry out', 'abandon', 'delay'],
+      'establish': ['create or set up', 'found', 'destroy', 'remove'],
+      'emphasize': ['stress or highlight', 'focus on', 'ignore', 'minimize'],
+      'comprehensive': ['complete or thorough', 'extensive', 'limited', 'partial'],
+      'facilitate': ['make easier', 'help', 'hinder', 'complicate'],
+      'substantiate': ['prove or support', 'verify', 'disprove', 'weaken'],
+      'paradigm': ['model or pattern', 'framework', 'chaos', 'randomness'],
+      'nuanced': ['subtle or detailed', 'complex', 'simple', 'obvious'],
+      'article': ['news story', 'report', 'fiction', 'poem'],
+      'summit': ['peak or meeting', 'conference', 'valley', 'beginning'],
+      'climate': ['weather patterns', 'environment', 'weather', 'temperature'],
+      'energy': ['power or force', 'strength', 'weakness', 'exhaustion'],
+      'renewable': ['sustainable', 'reusable', 'finite', 'depletable'],
+      'emission': ['release or discharge', 'output', 'absorption', 'retention'],
+      'policy': ['rule or guideline', 'regulation', 'chaos', 'randomness'],
+    }
     
     if (words.length === 0) {
       // 키워드가 없으면 기본 퀴즈
@@ -1007,7 +1053,7 @@ Always respond with valid JSON array only, no additional text.`
         {
           id: 'fallback-1',
           question: 'Based on the article, what is the main topic?',
-          options: ['The article discusses current events', 'The article covers important news', 'The article reports on recent developments', 'The article presents new information'],
+          options: ['Current events', 'Important news', 'Recent developments', 'Historical events'],
           correctAnswer: 0,
           explanation: 'This is a fallback question. Please check the article content.',
           word: 'article',
@@ -1018,12 +1064,31 @@ Always respond with valid JSON array only, no additional text.`
     // 각 단어마다 다른 정답 위치에 배치
     return words.slice(0, 5).map((word, idx) => {
       const correctIndex = idx % 4
-      const correctOption = `A key term from the article`
-      const wrongOptions = [
-        `A different concept not in the article`,
-        `An unrelated term`,
-        `A term with opposite meaning`
-      ]
+      const wordLower = word.toLowerCase()
+      
+      // 단어의 의미가 사전에 있으면 사용, 없으면 일반적인 의미 생성
+      let meanings: string[] = []
+      if (wordMeanings[wordLower]) {
+        meanings = [...wordMeanings[wordLower]]
+      } else {
+        // 일반적인 의미 생성 (단어의 일반적인 의미 추정)
+        meanings = [
+          `A key concept related to ${word}`,
+          `An important term meaning ${word}`,
+          `A significant idea about ${word}`,
+          `A central theme involving ${word}`
+        ]
+      }
+      
+      // 정답은 첫 번째 의미 (일반적으로 가장 일반적인 의미)
+      const correctOption = meanings[0]
+      const wrongOptions = meanings.slice(1, 4)
+      
+      // 선택지가 4개가 안 되면 보충
+      while (wrongOptions.length < 3) {
+        wrongOptions.push(`A different concept not related to ${word}`)
+      }
+      
       const shuffledOptions = [...wrongOptions]
       shuffledOptions.splice(correctIndex, 0, correctOption)
       
@@ -1032,7 +1097,7 @@ Always respond with valid JSON array only, no additional text.`
         question: `What does "${word}" mean in this article?`,
         options: shuffledOptions.slice(0, 4),
         correctAnswer: correctIndex,
-        explanation: `"${word}" is a key term in this article.`,
+        explanation: `"${word}" means "${correctOption}" in this context.`,
         word: word,
       }
     })

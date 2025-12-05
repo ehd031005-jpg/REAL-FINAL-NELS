@@ -56,10 +56,6 @@ export default function NewsPage() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
       const data = await response.json()
       
       if (data && data.articles && Array.isArray(data.articles) && data.articles.length > 0) {

@@ -766,32 +766,36 @@ export async function generateQuizFromArticle(
 - Focus on words that demonstrate high-level English proficiency`
     }
     
-    const prompt = `You are an English language teacher creating vocabulary quizzes from news articles for ${level}-level learners. Create 5 quiz questions that test understanding of SPECIFIC words and phrases from this article.
+    const prompt = `You are an English language teacher creating vocabulary quizzes from news articles for ${level}-level learners. Create 5 quiz questions that test understanding of how SPECIFIC words and phrases are used IN THE CONTEXT OF THIS ARTICLE.
 
 ${levelInstructions}
 
 CRITICAL REQUIREMENTS:
-1. Questions MUST be based on ACTUAL words, phrases, or concepts from the article
-2. The correct answer MUST appear in different positions (0, 1, 2, or 3) - DO NOT always put it in position 0
-3. Distractors should be plausible but clearly wrong
-4. Questions should test understanding of the article's content, not generic vocabulary
+1. Questions MUST test how words are used IN THE CONTEXT OF THIS SPECIFIC ARTICLE, not their general dictionary meaning
+2. For each word, identify HOW it is used in the article and create a question about that specific usage
+3. The correct answer MUST appear in different positions (0, 1, 2, or 3) - DO NOT always put it in position 0
+4. Distractors should be plausible but clearly wrong in the context of this article
 5. Questions MUST match the ${level} level - use appropriate vocabulary and sentence complexity
+6. MANDATORY: Each question must reference the article's context - use phrases like "In this article", "According to the article", "In the context of this article"
 
 Article Title: ${title}
 Article Content: ${articleContent}
 ${keywords.length > 0 ? `Key Vocabulary from Article: ${keywords.join(', ')}` : ''}
 
 For each question:
-1. Create a fill-in-the-blank question using a sentence from or based on the article
-2. Generate 4 multiple choice options where:
-   - ONE option is the correct answer (from the article)
-   - THREE options are plausible distractors - these must be REAL words, phrases, or concepts related to the topic but clearly wrong
+1. Select a word or phrase that appears in the article
+2. Identify HOW that word is used in the article's context (what does it mean in this specific article?)
+3. Create a question that asks about the word's meaning IN THE CONTEXT OF THIS ARTICLE
+   - Format: "In this article, what does '[word]' mean?" or "According to the article, '[word]' refers to..." or "In the context of this article, '[word]' means..."
+4. Generate 4 multiple choice options where:
+   - ONE option is the correct meaning based on how the word is used IN THIS ARTICLE
+   - THREE options are plausible distractors - these must be REAL meanings that could apply to the word in other contexts, but are WRONG for this article
    - CRITICAL: Each option MUST be a meaningful word, phrase, or concept - NEVER use "Option A", "Option B", "option A", "option B", "Choice A", "Choice B", or any placeholder text
-   - All options should be plausible but only one is correct
+   - All options should be plausible meanings of the word, but only one matches how it's used in THIS article
    - Options should be related to the article's topic and vocabulary level
-3. Randomly place the correct answer in different positions (0, 1, 2, or 3) - vary the position for each question
-4. Provide an explanation that references the article content
-5. Identify the key word or phrase being tested
+5. Randomly place the correct answer in different positions (0, 1, 2, or 3) - vary the position for each question
+6. Provide an explanation that references the specific sentence or context from the article where the word appears
+7. Identify the key word or phrase being tested
 
 CRITICAL REQUIREMENTS FOR OPTIONS:
 - Each option MUST be a REAL, meaningful word, phrase, or concept
@@ -825,26 +829,41 @@ Example:
 - CORRECT: "options": ["delaying", "stopping", "accelerating", "preventing"]
 - WRONG: "options": ["option A", "option B", "accelerating", "option D"]
 
-Example of good question:
-If the article mentions "The summit focused on accelerating the transition to renewable energy", a good question would be:
+Example of good question (CONTEXT-BASED):
+If the article mentions "The environmental impact of the new policy was significant", a good question would be:
 {
-  "question": "According to the article, the summit focused on _____ the transition to renewable energy.",
-  "options": ["delaying", "stopping", "accelerating", "preventing"],
-  "correctAnswer": 2,
-  "explanation": "The article states that the summit focused on 'accelerating the transition to sustainable energy sources.'",
-  "word": "accelerating"
+  "question": "In this article, what does 'impact' mean?",
+  "options": ["effect or influence", "collision or crash", "significance", "consequence"],
+  "correctAnswer": 0,
+  "explanation": "In this article, 'impact' is used to mean 'effect or influence' as in 'the environmental impact of the new policy was significant.' The word refers to the effect the policy has on the environment, not a physical collision.",
+  "word": "impact"
 }
 
-Note: correctAnswer should be 0, 1, 2, or 3, and should vary across questions.`
+Another example:
+If the article mentions "Scientists are developing new technologies to combat climate change", a good question would be:
+{
+  "question": "According to the article, what does 'developing' mean in this context?",
+  "options": ["creating or building", "declining or decreasing", "destroying", "ignoring"],
+  "correctAnswer": 0,
+  "explanation": "In this article, 'developing' means 'creating or building' new technologies. The article states that scientists are 'developing new technologies,' which means they are creating or working on new technologies.",
+  "word": "developing"
+}
+
+CRITICAL: 
+- Questions must ask about the word's meaning IN THE CONTEXT OF THIS ARTICLE
+- Options must be different possible meanings of the word, but only one matches how it's used in THIS article
+- The explanation must reference the specific context from the article
+- correctAnswer should be 0, 1, 2, or 3, and should vary across questions.`
 
     const systemInstruction = `You are an English language teacher creating vocabulary quizzes from news articles. 
 
-CRITICAL RULES FOR OPTIONS:
-- Each option MUST be a real, meaningful word, phrase, or concept
-- NEVER use "Option A", "Option B", "option A", "option B", "Choice A", "Choice B", or any placeholder text
-- All 4 options must be plausible answers - use real words/phrases that could make sense in context
-- Wrong options should be related to the topic but clearly incorrect
-- Example: For a question about "accelerating", use options like ["delaying", "stopping", "accelerating", "preventing"] - NOT ["option A", "option B", "accelerating", "option D"]
+CRITICAL RULES:
+1. CONTEXT-BASED QUESTIONS: Each question must ask about how a word is used IN THE CONTEXT OF THE SPECIFIC ARTICLE, not its general dictionary meaning
+2. QUESTION FORMAT: Use phrases like "In this article, what does '[word]' mean?" or "According to the article, '[word]' refers to..." or "In the context of this article, '[word]' means..."
+3. OPTIONS: Each option MUST be a real, meaningful word, phrase, or concept that could be a valid meaning of the word
+4. CONTEXT-SPECIFIC: The correct answer must match how the word is used IN THIS ARTICLE, while wrong options are other possible meanings that don't fit this article's context
+5. FORBIDDEN: NEVER use "Option A", "Option B", "option A", "option B", "Choice A", "Choice B", or any placeholder text
+6. EXAMPLE: For "impact" meaning "effect" in an article about environmental policy, use options like ["effect or influence", "collision or crash", "significance", "consequence"] where "effect or influence" is correct for this article's context
 
 Always respond with valid JSON array only, no additional text.`
 
@@ -1061,10 +1080,13 @@ Always respond with valid JSON array only, no additional text.`
       ]
     }
     
-    // 각 단어마다 다른 정답 위치에 배치
+    // 각 단어마다 다른 정답 위치에 배치 (기사 맥락 기반)
     return words.slice(0, 5).map((word, idx) => {
       const correctIndex = idx % 4
       const wordLower = word.toLowerCase()
+      
+      // 기사 내용에서 단어가 사용된 맥락 찾기
+      const wordContext = findWordContext(content, word)
       
       // 단어의 의미가 사전에 있으면 사용, 없으면 일반적인 의미 생성
       let meanings: string[] = []
@@ -1092,12 +1114,19 @@ Always respond with valid JSON array only, no additional text.`
       const shuffledOptions = [...wrongOptions]
       shuffledOptions.splice(correctIndex, 0, correctOption)
       
+      // 기사 맥락 기반 질문 생성
+      const question = wordContext 
+        ? `In this article, what does "${word}" mean in the context of "${wordContext}"?`
+        : `In this article, what does "${word}" mean?`
+      
       return {
         id: `fallback-${idx + 1}`,
-        question: `What does "${word}" mean in this article?`,
+        question: question,
         options: shuffledOptions.slice(0, 4),
         correctAnswer: correctIndex,
-        explanation: `"${word}" means "${correctOption}" in this context.`,
+        explanation: wordContext 
+          ? `In this article, "${word}" means "${correctOption}" in the context of "${wordContext}".`
+          : `"${word}" means "${correctOption}" in this article's context.`,
         word: word,
       }
     })
@@ -1119,4 +1148,25 @@ function extractKeywords(text: string): string[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([word]) => word)
+}
+
+/**
+ * 기사 내용에서 단어가 사용된 맥락 찾기
+ */
+function findWordContext(content: string, word: string): string | null {
+  const wordLower = word.toLowerCase()
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0)
+  
+  // 단어가 포함된 문장 찾기
+  const contextSentence = sentences.find(s => 
+    s.toLowerCase().includes(wordLower)
+  )
+  
+  if (contextSentence) {
+    // 문장을 50자로 제한
+    const context = contextSentence.trim()
+    return context.length > 50 ? context.substring(0, 50) + '...' : context
+  }
+  
+  return null
 }

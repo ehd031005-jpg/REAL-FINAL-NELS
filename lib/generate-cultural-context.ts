@@ -54,11 +54,18 @@ export async function generateCulturalContext(
   const prompt = `You are a cultural studies expert and educator. Your task is to DEEPLY ANALYZE this specific news article and provide UNIQUE, ARTICLE-SPECIFIC cultural and historical background knowledge.
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
-1. Read the ENTIRE article content below - do not skip any paragraphs
-2. Identify ALL specific details: countries, cities, organizations, people, dates, events, numbers, policies mentioned
+1. Read the ENTIRE article content below - analyze EVERY sentence for specific details
+2. Extract ALL specific information: 
+   - Exact dates and years (e.g., "2016", "the 1980s", "since 1979")
+   - Specific countries, cities, regions mentioned (e.g., "China", "Nebraska", "the American Midwest")
+   - Specific organizations, institutions, teams (e.g., "University of Nebraska", "UN", "NATO")
+   - Specific people mentioned (e.g., "Trump", "Biden", "Xi Jinping")
+   - Specific events, policies, treaties (e.g., "the Chinese Civil War", "the Paris Agreement", "the Trade War")
+   - Specific numbers, statistics, percentages
 3. Extract the MAIN TOPIC and SUBTOPICS discussed in this article
 4. Identify what CULTURAL or HISTORICAL background knowledge a reader would need to understand this article's significance
 5. DO NOT summarize the article - provide BACKGROUND knowledge that helps interpret it
+6. MANDATORY: Your description MUST start with a SPECIFIC fact, date, event, or name from the article - NOT a generic statement
 
 ARTICLE INFORMATION:
 Title: ${title}
@@ -79,13 +86,45 @@ Read the article content above and extract:
 
 STEP 2: PROVIDE SPECIFIC BACKGROUND KNOWLEDGE
 Based on what you extracted above, provide cultural/historical background that helps readers understand:
-- **If a specific team/organization is mentioned**: Explain what it is, when it was founded, its cultural/historical significance, and why it matters in that culture
-- **If a specific country/region is mentioned**: Explain relevant cultural practices, historical events, or social structures in that region related to the article's topic
-- **If a specific event is mentioned**: Explain the historical background, causes, and cultural significance of that event
-- **If a policy/decision is discussed**: Explain the cultural values, historical precedents, or social structures that shape such policies in that context
-- **If organizations/treaties are mentioned**: Explain when they were created, their historical purpose, and their cultural/political significance
-- **If sports are discussed**: Explain the cultural significance of that sport in that specific region/country, including historical development and social meaning
-- **If education is discussed**: Explain the cultural/historical context of education systems in that region, including how they developed and what values they reflect
+
+CRITICAL: You MUST use the specific information you extracted from the article. Do NOT make generic statements!
+
+- **If a specific team/organization is mentioned**: 
+  - Start with: "The [ORGANIZATION NAME] was established in [YEAR]..."
+  - Explain what it is, when it was founded (use the exact year if mentioned), its cultural/historical significance, and why it matters in that culture
+  - Use specific examples from the article
+  
+- **If a specific country/region is mentioned**: 
+  - Start with: "In [COUNTRY/REGION], [SPECIFIC FACT] has shaped..."
+  - Explain relevant cultural practices, historical events, or social structures in that region related to the article's topic
+  - Reference specific dates, events, or policies mentioned in the article
+  
+- **If a specific event is mentioned**: 
+  - Start with: "The [EVENT NAME] ([YEAR-YEAR] or [YEAR]) occurred when..."
+  - Explain the historical background, causes, and cultural significance of that event
+  - Use specific dates and details from the article
+  
+- **If a policy/decision is discussed**: 
+  - Start with: "The [POLICY NAME] was established in [YEAR]..." or "In [YEAR], [COUNTRY] implemented..."
+  - Explain the cultural values, historical precedents, or social structures that shape such policies in that context
+  - Reference specific policies, laws, or decisions mentioned in the article
+  
+- **If organizations/treaties are mentioned**: 
+  - Start with: "[ORGANIZATION NAME] was created in [YEAR]..." or "The [TREATY NAME] was signed in [YEAR]..."
+  - Explain when they were created (use exact year if mentioned), their historical purpose, and their cultural/political significance
+  - Use specific details from the article
+  
+- **If sports are discussed**: 
+  - Start with: "[SPORT NAME] emerged in [COUNTRY/REGION] in [YEAR]..." or "The [TEAM NAME] was established in [YEAR]..."
+  - Explain the cultural significance of that sport in that specific region/country, including historical development and social meaning
+  - Use specific teams, dates, or events mentioned in the article
+  
+- **If education is discussed**: 
+  - Start with: "The [EDUCATION SYSTEM/INSTITUTION] in [COUNTRY] was established in [YEAR]..." or "In [YEAR], [COUNTRY] implemented..."
+  - Explain the cultural/historical context of education systems in that region, including how they developed and what values they reflect
+  - Use specific institutions, dates, or policies from the article
+
+REMEMBER: ALWAYS start with a SPECIFIC fact, date, name, or event from the article. NEVER start with generic phrases!
 
 CRITICAL: Your explanation MUST:
 - Start with a SPECIFIC fact, date, or historical event (NOT a generic statement)
@@ -118,7 +157,19 @@ ${levelGuidance}
 Provide your response as JSON with this exact structure:
 {
   "title": "A specific, descriptive title about the cultural/historical theme (e.g., 'The History of Climate Diplomacy', 'AI Ethics Across Cultures', 'Taiwan's Complex International Status')",
-  "description": "A ${level === 'beginner' ? 'simple' : level === 'intermediate' ? 'detailed' : 'comprehensive'} explanation (5-7 sentences) with SPECIFIC facts: Start with a concrete historical event, date, or fact. Explain how this has shaped current discussions. Provide specific examples of cultural differences or historical context. Explain why this background helps interpret the article. Use concrete examples, names, dates, and facts - NOT abstract statements.",
+  "description": "A ${level === 'beginner' ? 'simple' : level === 'intermediate' ? 'detailed' : 'comprehensive'} explanation (minimum 250 words, 5-7 sentences) with SPECIFIC facts: 
+  
+  MANDATORY REQUIREMENTS:
+  - MUST start with a concrete historical event, date, year, or specific fact from the article (e.g., 'In 2016, Donald Trump was elected...' or 'The Chinese Civil War (1945-1949) resulted in...' or 'The University of Nebraska established its football team in 1890...')
+  - MUST include at least 2-3 specific details from the article (dates, countries, organizations, people, events)
+  - MUST explain the historical development or cultural significance using concrete examples
+  - MUST reference specific countries, organizations, or events mentioned in the article
+  - MUST explain why this background helps interpret THIS specific article
+  - MUST use concrete examples, names, dates, and facts - NOT abstract statements
+  - FORBIDDEN: Do NOT use phrases like 'has specific historical significance', 'evolved through particular events', 'understanding the context helps' - these are too generic!
+  
+  Example of GOOD start: 'The Chinese Civil War (1945-1949) resulted in the Republic of China government retreating to Taiwan...'
+  Example of BAD start: 'This topic has specific historical and cultural significance...'",
   "examples": ["specific term 1", "specific term 2", "specific term 3", "specific term 4"]
 }
 
@@ -163,18 +214,27 @@ Return ONLY valid JSON, no additional text.`
     const systemInstruction = `You are a cultural studies expert and educator specializing in providing SPECIFIC, FACTUAL background knowledge for news articles.
 
 ABSOLUTE REQUIREMENTS - YOU MUST FOLLOW THESE:
-1. **Read the ENTIRE article content** - analyze every paragraph for specific details
-2. **Extract specific entities** - teams, organizations, people, countries, dates, events mentioned in the article
+1. **Read the ENTIRE article content** - analyze every paragraph, sentence, and word for specific details
+2. **Extract ALL specific entities** - teams, organizations, people, countries, cities, dates, years, events, policies, treaties, numbers mentioned in the article
 3. **Provide factual background** - historical events, cultural practices, social structures SPECIFIC to what the article discusses
-4. **Start with concrete facts** - begin with a specific date, event, name, or historical fact (NOT "This topic is important" or "Understanding this helps")
-5. **Reference article details** - mention specific countries, organizations, dates, or events from the article
+4. **MANDATORY START**: Your description MUST begin with one of these formats:
+   - "In [YEAR], [SPECIFIC EVENT] occurred..."
+   - "The [SPECIFIC ENTITY] was established in [YEAR]..."
+   - "[SPECIFIC PERSON/ORGANIZATION] [SPECIFIC ACTION] in [YEAR]..."
+   - "The [SPECIFIC EVENT] (YEAR-YEAR) resulted in..."
+   - "[SPECIFIC COUNTRY/REGION] has [SPECIFIC FACT] since [YEAR]..."
+   - NEVER start with "This topic", "Understanding", "Different", "Various"
+5. **Reference article details** - MUST mention at least 2-3 specific details from the article (countries, organizations, dates, events, people)
 6. **Explain cultural significance** - why this background matters for understanding THIS specific article
-7. **Use concrete examples** - specific names, dates, places, numbers (NOT abstract concepts)
+7. **Use concrete examples** - specific names, dates, places, numbers, events (NOT abstract concepts)
 8. **Minimum 250 words** - provide comprehensive background knowledge
+9. **Include specific information** - at least 2 dates/years, 1-2 countries/organizations, 1-2 specific events or policies
 
-FORBIDDEN PHRASES (NEVER USE):
+FORBIDDEN PHRASES (NEVER USE - these will cause your response to be rejected):
 - "This topic has important cultural background"
+- "This topic has specific historical and cultural significance"
 - "Understanding the context helps interpret news"
+- "Understanding the specific historical context"
 - "Different cultures have different views"
 - "This topic reflects cultural and historical differences"
 - "Understanding these differences helps"
@@ -182,13 +242,25 @@ FORBIDDEN PHRASES (NEVER USE):
 - "Based on their history and culture"
 - "This topic is important in many cultures"
 - "Various perspectives exist"
-- Any generic statement without specific facts
+- "evolved through particular historical events"
+- "particular historical events and cultural developments"
+- "helps interpret current news about this topic"
+- "in [country], this topic"
+- "this topic has evolved"
+- Any generic statement without specific facts, dates, or names
 
 REQUIRED FORMAT:
-- Start with: "The [specific entity] was [specific fact/date/event]..."
-- Include: Specific dates, names, places, organizations from the article
-- Explain: Historical development, cultural practices, social significance
+- Start with: "In [YEAR], [SPECIFIC EVENT]..." or "The [SPECIFIC ENTITY] was [FACT] in [YEAR]..."
+- Include: At least 2-3 specific dates/years, 1-2 countries/organizations, 1-2 specific events from the article
+- Explain: Historical development, cultural practices, social significance using concrete examples
 - Connect: How this background helps understand the article's significance
+
+VALIDATION: Your response will be automatically rejected if it:
+- Starts with generic phrases like "This topic", "Understanding", "Different"
+- Contains forbidden phrases listed above
+- Lacks at least 2 specific details (dates, countries, organizations, events)
+- Is shorter than 250 words
+- Does not reference specific information from the article
 
 Always respond with valid JSON only, no additional text.`
 
@@ -236,18 +308,31 @@ Always respond with valid JSON only, no additional text.`
         const isGeneric = isGenericDescription(description || '')
         const isTooShort = !description || description.length < 250
         
-        // 일반적인 구문이 있거나 너무 짧으면 무조건 fallback 사용
-        if (isGeneric || isTooShort) {
-          console.log('❌ Description is generic or too short, using enhanced fallback')
+        // 첫 문장이 구체적인 사실로 시작하는지 확인
+        const firstSentence = description?.split(/[.!?]+/)[0]?.trim() || ''
+        const startsWithGeneric = /^(this|the|it|understanding|different|various|many|some|in\s+china,\s+this|this\s+topic|trump's\s+in)/i.test(firstSentence)
+        const startsWithSpecific = /^(in|during|since|after|before|when|where|the)\s+[A-Z]/.test(firstSentence) || 
+                                   /\b(19|20)\d{2}\b/.test(firstSentence) ||
+                                   /\b(Trump|Biden|Xi|China|United States|Nebraska|University|College|NATO|UN|Paris|Taiwan|Huskers)/i.test(firstSentence)
+        
+        const hasValidStart = !startsWithGeneric || startsWithSpecific
+        
+        // 일반적인 구문이 있거나 너무 짧거나 시작이 잘못되었으면 무조건 fallback 사용
+        if (isGeneric || isTooShort || !hasValidStart) {
+          console.log('❌ Description failed validation, using enhanced fallback')
           console.log('Description received:', description?.substring(0, 300) || 'null')
           console.log('Is generic:', isGeneric)
           console.log('Length:', description?.length || 0)
+          console.log('Has valid start:', hasValidStart)
+          console.log('First sentence:', firstSentence.substring(0, 100))
           console.log('Article title:', title.substring(0, 100))
           
           const topic = identifyMainTopic(title, content)
           const specificInfo = extractSpecificInfo(title, content)
+          const keyEntities = extractKeyEntities(title, content)
           console.log('Topic identified:', topic)
           console.log('Specific info:', specificInfo.substring(0, 200))
+          console.log('Key entities:', keyEntities.slice(0, 5).join(', '))
           
           const enhancedDescription = generateEnhancedFallbackDescription(topic, level, title, content, specificInfo)
           console.log('✅ Enhanced fallback description:', enhancedDescription.substring(0, 200))
@@ -499,6 +584,18 @@ function isGenericDescription(description: string): boolean {
     'unique historical experiences',
     'essential for interpreting',
     'current developments related',
+    // 추가: 사용자가 보여준 일반적 구문들
+    'has specific historical and cultural significance',
+    'evolved through particular historical events',
+    'particular historical events and cultural developments',
+    'understanding the specific historical context',
+    'helps interpret current news about this topic',
+    'in china, this topic',
+    'this topic has evolved',
+    'through particular historical',
+    'cultural developments',
+    'understanding the specific',
+    'historical context and cultural factors',
   ]
   
   const lowerDesc = description.toLowerCase()
@@ -585,7 +682,7 @@ function generateEnhancedFallbackDescription(
   content: string,
   specificInfo: string
 ): string {
-  // 기사 제목과 내용에서 구체적인 정보 추출
+  // 기사 제목과 내용에서 구체적인 정보 추출 (더 적극적으로)
   const titleLower = title.toLowerCase()
   const contentLower = content.toLowerCase()
   
@@ -596,13 +693,27 @@ function generateEnhancedFallbackDescription(
     !['The', 'This', 'That', 'With', 'From', 'About', 'News'].includes(k)
   ) || titleKeywords[0] || ''
   
-  // 기사에서 구체적인 정보 추출
+  // 기사에서 구체적인 정보 추출 (더 많이)
   const countries = extractKeyEntities(title, content).filter(e => 
-    e.match(/^(China|United States|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Brazil|Canada|Australia|Nebraska)/i)
+    e.match(/^(China|United States|USA|Russia|Japan|Korea|India|Germany|France|Britain|Taiwan|Ukraine|Brazil|Canada|Australia|Nebraska|America|American|Europe|European|Asia|Asian)/i)
   )
   
   const years = content.match(/\b(19|20)\d{2}\b/g)
   const recentYear = years ? Array.from(new Set(years)).sort().reverse()[0] : null
+  const allYears = years ? Array.from(new Set(years)).slice(0, 3) : []
+  
+  // 조직/기관 추출
+  const organizations = extractKeyEntities(title, content).filter(e => 
+    e.match(/^(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration|Department|Ministry)/i)
+  )
+  
+  // 특정 인물 추출
+  const people = extractKeyEntities(title, content).filter(e => 
+    e.match(/^(Trump|Biden|Xi|Putin|Nebraska|Huskers|Paris|Beijing|Washington|Taipei|Obama|Clinton)/i)
+  )
+  
+  // 특정 이벤트/정책 추출
+  const events = content.match(/\b(War|Summit|Agreement|Act|Conference|Revolution|Civil War|Treaty|Convention|Election|Trade War|Cold War)\b/gi) || []
   
   // 스포츠 팀 관련 (Huskers, etc.) - 더 넓은 패턴으로 검색
   if (titleLower.includes('husker') || titleLower.includes('huskers') || 
@@ -658,6 +769,68 @@ function generateEnhancedFallbackDescription(
       } else {
         return `Sports function as cultural institutions that reflect and reinforce societal values, regional identities, and collective belonging. The development of athletic traditions varies significantly across cultures, with each society prioritizing different sports based on historical, economic, and cultural factors. In the United States, intercollegiate and professional sports have evolved into complex cultural systems that extend beyond entertainment, shaping community identity, regional pride, and social cohesion. The intense fan culture and institutional support for athletics reveal deeper cultural values around competition, achievement, and collective identity that differ from professional sports models in other countries.`
       }
+    }
+  }
+  
+  // 기사에서 추출한 구체적인 정보를 사용하여 설명 생성
+  const country = countries.length > 0 ? countries[0] : null
+  const org = organizations.length > 0 ? organizations[0] : null
+  const person = people.length > 0 ? people[0] : null
+  const event = events.length > 0 ? events[0] : null
+  const year = recentYear || (allYears.length > 0 ? allYears[0] : null)
+  
+  // 구체적인 정보가 있으면 그것을 사용하여 설명 생성
+  if (country || year || org || person || event) {
+    const contextParts: string[] = []
+    if (year) contextParts.push(year)
+    if (country) contextParts.push(country)
+    if (org) contextParts.push(org)
+    if (person) contextParts.push(person)
+    if (event) contextParts.push(event)
+    
+    // 구체적인 정보를 포함한 설명 생성
+    if (level === 'beginner') {
+      const startFact = year 
+        ? `In ${year}, `
+        : country
+        ? `In ${country}, `
+        : person
+        ? `${person} `
+        : org
+        ? `${org} `
+        : event
+        ? `The ${event} `
+        : ''
+      
+      return `${startFact}${mainKeyword || 'this topic'} became important. ${country ? `${country} has ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has ` : ''}this topic has developed through specific events and cultural changes. ${country ? `The situation in ${country} shows ` : ''}how different places have different ways of thinking about this topic. Learning about this history helps understand why people talk about it today.`
+    } else if (level === 'intermediate') {
+      const startFact = year 
+        ? `In ${year}, `
+        : country
+        ? `In ${country}, `
+        : person
+        ? `${person} `
+        : org
+        ? `${org} `
+        : event
+        ? `The ${event} `
+        : ''
+      
+      return `${startFact}${mainKeyword || 'this topic'} emerged as a significant issue when specific historical events and cultural developments shaped its current form. ${country ? `The situation in ${country} reflects ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has influenced ` : ''}${person ? `${person}'s role in ` : ''}how this topic is understood. The historical background of ${country || 'this issue'} helps explain why current developments matter and how different perspectives have developed over time. Understanding these specific historical and cultural factors is essential for interpreting news about ${mainKeyword || 'this topic'}.`
+    } else {
+      const startFact = year 
+        ? `In ${year}, `
+        : country
+        ? `In ${country}, `
+        : person
+        ? `${person} `
+        : org
+        ? `${org} `
+        : event
+        ? `The ${event} `
+        : ''
+      
+      return `${startFact}${mainKeyword || 'this topic'} emerged from specific historical processes that reflect deeper cultural and structural dynamics. ${country ? `The development of this topic in ${country} illustrates ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org}'s influence on ` : ''}${person ? `${person}'s impact on ` : ''}how different societies conceptualize and respond to similar challenges. The evolution of this topic reveals broader patterns in how cultural values, historical experiences, and institutional structures shape contemporary understanding and policy responses. These differences reflect fundamental variations in how societies interpret authority, legitimacy, and the relationship between individuals and institutions.`
     }
   }
   
@@ -750,12 +923,22 @@ function generateFallbackDescription(
         
         if (level === 'beginner') {
           return `${mainSubject} is an important topic${contextStr}. This topic has a long history. Many people care about this topic. Different places have different ways of thinking about it. Learning about this history helps understand the news.`
-        } else if (level === 'intermediate') {
-          // 구체적인 정보를 포함한 설명 생성
+        } else         if (level === 'intermediate') {
+          // 구체적인 정보를 포함한 설명 생성 (일반적 구문 피하기)
           if (country || year || org) {
-            return `${mainSubject}${contextStr ? ' ' + contextStr : ''} has specific historical and cultural significance. ${country ? `In ${country}, ` : ''}${year ? `Since ${year}, ` : ''}this topic has evolved through particular historical events and cultural developments. ${org ? `Organizations like ${org} have played important roles. ` : ''}Understanding the specific historical context and cultural factors helps interpret current news about this topic.`
+            // 구체적인 사실로 시작
+            const startFact = year 
+              ? `In ${year}, ${mainSubject} became significant when`
+              : country
+              ? `In ${country}, ${mainSubject} has been shaped by`
+              : org
+              ? `${org} has influenced ${mainSubject} through`
+              : `${mainSubject} emerged from`
+            
+            return `${startFact} specific historical events and cultural developments. ${country ? `The situation in ${country} reflects ` : ''}${year ? `Since ${year}, ` : ''}${org ? `${org} has played a key role in ` : ''}shaping how this topic is understood. The historical background of ${country || 'this issue'} helps explain why current developments matter and how different perspectives have developed over time.`
           }
-          return `${mainSubject} has specific historical and cultural significance. This topic has evolved through particular historical events and cultural developments in different regions. Understanding the specific historical context and cultural factors that shaped this topic helps interpret current news and developments.`
+          // 구체적 정보가 없어도 일반적 구문 피하기
+          return `${mainSubject} emerged from specific historical events that shaped its current significance. Different regions have developed distinct approaches based on their unique historical experiences, economic conditions, and cultural values. The evolution of this topic reflects broader patterns in how societies respond to similar challenges, with each region adapting solutions to fit local contexts and traditions.`
         } else {
           return `${mainSubject} embodies complex cultural and historical dynamics${contextStr} that reflect deeper societal structures and ideological frameworks. The evolution of this topic reveals how different cultural traditions, historical experiences, and social systems shape contemporary understanding and responses. These differences are not merely variations in perspective but reflect fundamental differences in how societies conceptualize core values, authority, and the relationship between individuals and institutions.`
         }
@@ -765,7 +948,7 @@ function generateFallbackDescription(
       return level === 'beginner'
         ? `${mainSubject} is an important topic in the news. This topic has a history. Many countries care about this topic. Learning about this history helps understand why people talk about it.`
         : level === 'intermediate'
-        ? `${mainSubject} represents a significant cultural and historical phenomenon. The development of this topic involves specific historical events and cultural shifts. Different regions have developed distinct approaches based on their unique historical experiences and cultural values. Understanding these specific contexts helps interpret current news about this topic.`
+        ? `${mainSubject} emerged from specific historical events that shaped its current significance. The development of this topic reflects how different regions responded to similar challenges, with each adapting solutions based on local historical experiences, economic conditions, and cultural values. The evolution of this topic reveals broader patterns in how societies interpret and respond to complex issues, making it essential to understand the historical background when interpreting current developments.`
         : `${mainSubject} embodies complex cultural and historical dynamics that reflect deeper societal structures. The evolution of this topic reveals how different cultural traditions and historical experiences shape contemporary understanding. These differences reflect fundamental variations in how societies conceptualize values, authority, and social relationships.`
     }
     
@@ -773,7 +956,7 @@ function generateFallbackDescription(
     return level === 'beginner'
       ? 'This topic has cultural and historical background. Different countries have different views. Understanding this helps explain news.'
       : level === 'intermediate'
-      ? 'This topic has specific historical and cultural significance. The development of this topic involves particular historical events and cultural developments. Understanding the specific historical context and cultural factors helps interpret current news about this topic.'
+      ? 'This topic emerged from specific historical events that shaped its current significance. The development of this topic reflects how different regions responded to similar challenges, with each adapting solutions based on local historical experiences and cultural values. Understanding the historical background helps interpret why current developments matter and how different perspectives have developed over time.'
       : 'This topic embodies complex cultural and historical dynamics that reflect deeper societal structures. The evolution of this topic reveals how different cultural traditions and historical experiences shape contemporary understanding.'
   }
   
@@ -840,13 +1023,28 @@ function generateMoreSpecificFallback(
   const organizations = content.match(/\b(University|College|UN|NATO|EU|IPCC|UNESCO|Summit|Agreement|Act|Congress|Parliament|Government|Administration|White House)\b/gi)
   const org = organizations ? Array.from(new Set(organizations))[0] : null
   
-  // "Trump" 관련 특별 처리
-  if (titleLower.includes('trump') || contentLower.includes('trump')) {
+  // "Trump" 관련 특별 처리 (더 구체적으로)
+  if (titleLower.includes('trump') || contentLower.includes('trump') || mainKeyword.toLowerCase().includes('trump')) {
+    // 기사에서 Trump와 관련된 구체적인 정보 추출
+    const trumpYears = content.match(/\b(2016|2017|2018|2019|2020|2021|2024)\b/g)
+    const hasChina = contentLower.includes('china') || contentLower.includes('chinese')
+    const hasTrade = contentLower.includes('trade') || contentLower.includes('tariff')
+    const hasElection = contentLower.includes('election') || contentLower.includes('vote')
+    
     if (level === 'beginner') {
-      return `Donald Trump was the 45th President of the United States from 2017 to 2021. He is a businessman and politician. Trump's presidency was very controversial. Many people had different opinions about his policies. Understanding American politics helps explain news about Trump.`
+      if (hasChina) {
+        return `Donald Trump was the 45th President of the United States from 2017 to 2021. During his presidency, Trump had many disagreements with China about trade. He put taxes on Chinese products. China also put taxes on American products. This trade war affected many businesses. Understanding how America and China compete helps explain news about Trump and China.`
+      }
+      return `Donald Trump was the 45th President of the United States from 2017 to 2021. He was a businessman before becoming president. Trump's election in 2016 surprised many people. His presidency was very controversial. Many people had different opinions about his policies. Understanding American politics helps explain news about Trump.`
     } else if (level === 'intermediate') {
+      if (hasChina) {
+        return `Donald Trump's relationship with China during his presidency (2017-2021) reflected broader tensions in U.S.-China relations. The trade war that began in 2018, with tariffs on $250 billion worth of Chinese goods, represented a shift from decades of engagement policy. This conflict stemmed from concerns about intellectual property theft, trade imbalances, and China's growing economic influence. The Trump administration's "America First" approach contrasted with previous administrations' emphasis on multilateral cooperation. Understanding the historical context of U.S.-China relations since normalization in 1979, and how economic competition intersects with geopolitical tensions, is essential for interpreting news about Trump and China.`
+      }
       return `Donald Trump, the 45th President of the United States (2017-2021), marked a significant shift in American politics. A businessman and reality TV personality before entering politics, Trump's election in 2016 reflected populist movements and political polarization in the U.S. His presidency was marked by controversial policies on immigration, trade, and international relations. The American two-party system, established in the 1800s, creates a political environment where candidates must appeal to party bases. Understanding how American political culture, media influence, and electoral systems work helps interpret news about Trump and contemporary U.S. politics.`
     } else {
+      if (hasChina) {
+        return `The Trump administration's approach to China (2017-2021) represented a fundamental shift in U.S. foreign policy, moving from decades of engagement to strategic competition. The trade war initiated in 2018, involving tariffs on hundreds of billions of dollars in goods, reflected deeper concerns about intellectual property protection, technology transfer, and China's economic practices. This conflict occurred against the backdrop of China's rise as a global power since economic reforms began in 1978, and growing U.S. concerns about maintaining technological and economic dominance. The "America First" philosophy that characterized Trump's foreign policy contrasted with post-World War II multilateralism, reflecting broader debates about globalization, economic interdependence, and the future of U.S.-China relations in an era of great power competition.`
+      }
       return `Donald Trump's political career reflects broader shifts in American political culture and the relationship between media, populism, and institutional legitimacy. As the 45th U.S. President (2017-2021), Trump's background as a businessman and media personality, combined with his populist rhetoric, challenged traditional political norms. His presidency occurred during a period of intense political polarization in the United States, with debates over immigration, trade policy, and America's role in international institutions. Understanding the historical development of American political parties, the role of media in shaping political discourse, and the cultural factors that enable populist movements is crucial for interpreting news about Trump and contemporary American politics.`
     }
   }
